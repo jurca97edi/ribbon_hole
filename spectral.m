@@ -97,6 +97,7 @@ end
     Opt.BdG = false;
     
     hLeadModel = @LeadModel;
+    
     % creating the NTerminal class
     cRibbon2 = Ribbon_hole('width', width, 'height', height, 'Opt', Opt, 'param', param, 'filenameOut', fullfile( outputdir, [outfilename, '.xml']), ...
                        'leadmodel', hLeadModel, 'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width); 
@@ -189,6 +190,7 @@ end
             hChoseSites = @ChoseSites;           
             
             parfor jdx=1:length(Evec)
+            %for jdx=1:length(Evec)
                 Energy = Evec(jdx);                 
                 
                  % create an instance of class DOS to calculate the density of states along the whole scattering region
@@ -422,6 +424,8 @@ end
         
         %---------------------------------------------------------------
 
+        colbarlimits = [min(min(real(log(density_of_states_upper_hole)))) max(max(real(log(density_of_states_upper_hole))))];
+
         axes_DOS_upper_hole = axes('Parent',figure1, ...
                 'Visible', 'on',...
                 'FontSize', fontsize,... 
@@ -451,6 +455,8 @@ end
         
         %---------------------------------------------------------------
 
+        colbarlimits = [min(min(real(log(density_of_states_lower_electron)))) max(max(real(log(density_of_states_lower_electron))))];
+
         axes_DOS_lower_electron = axes('Parent',figure1, ...
                 'Visible', 'on',...
                 'FontSize', fontsize,... 
@@ -479,6 +485,8 @@ end
         
         
         %---------------------------------------------------------------
+
+        colbarlimits = [min(min(real(log(density_of_states_lower_hole)))) max(max(real(log(density_of_states_lower_hole))))];
 
         axes_DOS_lower_hole = axes('Parent',figure1, ...
                 'Visible', 'on',...
