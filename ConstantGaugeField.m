@@ -23,7 +23,7 @@
 function ret = ConstantGaugeField(x,y)
 
    %this term transform the homogenious B from the circular gauge to the Landau gauge
-   ret = 1;
+   ret = 0;
 end
             
    
