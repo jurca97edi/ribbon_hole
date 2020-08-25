@@ -1,4 +1,4 @@
-function ret = spectral( filenum, height, width, flux )
+function ret = spectral( height, width, flux , Circ_in, Circ_out )
 
 if ~exist('filenum', 'var')
     filenum = 1;
@@ -21,7 +21,20 @@ end
         flux = 0;% 0.25 micron
     end
     
+    if ~exist('Circ_in', 'var')
+        Circ_in = 0.7;% 0.25 micron
+    end
     
+    if ~exist('Circ_out', 'var')
+        Circ_out = 1.5;% 0.25 micron
+    end
+    
+        
+    height=str2num(height);
+    width=str2num(width);
+    flux=str2num(flux);
+    Circ_in=str2num(Circ_in);
+    Circ_out=str2num(Circ_out);
     
     % The Fermi level in the contacts
     EF = 0*0.2e-0;%-PotentialStrength;%0.25; % in eV
@@ -77,12 +90,12 @@ end
     cCircle_in = structures('circle');
     cCircle_in.center.x = (width+1)/2;
     cCircle_in.center.y = (height+1)/2;
-    cCircle_in.radius = 0.7*width;
+    cCircle_in.radius = Circ_in*width;
     
     % outher circle
     cCircle_out = structures('circle');
     cCircle_out.center = cCircle_in.center;
-    cCircle_out.radius = 1.5*width;
+    cCircle_out.radius = Circ_out*width;
     
     % setting the energy and tranverse momentum grids for the calculations
     [Evec, phivec] = setVectors();
@@ -308,18 +321,18 @@ end
     
         
         % perform gauge transformation
-        [~, ~, hgauge_field ] = createVectorPotential( -flux );
+        %[~, ~, hgauge_field ] = createVectorPotential( -flux );
         
         % retriving the corrdinates
-        coordinates = cLead.Read('coordinates');
+        %coordinates = cLead.Read('coordinates');
         
         % creating objet to perform gauge transformation
-        cPeierls = Peierls(Opt);
+        %cPeierls = Peierls(Opt);
         
-        gsurf_inv = cLead.Read('gsurfinv');
+        %gsurf_inv = cLead.Read('gsurfinv');
         
         
-        gsurf_inv = cPeierls.gaugeTransformation( gsurf_inv, coordinates, hgauge_field );
+        %gsurf_inv = cPeierls.gaugeTransformation( gsurf_inv, coordinates, hgauge_field );
         
         % saving the gauge transformed Greens function
         %cLead.Write('gsurfinv', gsurf_inv);
@@ -343,7 +356,7 @@ end
 %> @brief Creates and set function handles of the magnetic vector potentials in the Ribbon class
 %> @param B The magnetic field
     function CreateHandlesForMagneticField2( flux )        
-        [hLead, hScatter, gauge_field ] = createVectorPotential( flux );        
+        [hLead, hScatter ] = createVectorPotential( flux );        
         cRibbon2.setHandlesForMagneticField('scatter', hScatter, 'lead', hLead );          
     end
 
@@ -353,7 +366,7 @@ end
 %> @return [1] Function handle of the vector potential in the leads .
 %> @return [2] Function handle of the vector potential in the scattering region.
 %> @return [3] Function handle of the scalar potential that transforms vector potential in the scattering center into a vector potential in the leads.
-    function [hLead, hScatter, hgauge_field ] = createVectorPotential( flux )
+    function [hLead, hScatter ] = createVectorPotential( flux )
         
 		phi0 = h/qe;  
         
@@ -361,9 +374,9 @@ end
         hLead = @(x,y)(zeroA(x,y));
         
         %hScatter = @(x,y)(CircularVectorPotential(x,y, flux, cCircle_in));
-        hScatter = @(x,y)(ConstantVectorPotential(x,y, flux ));
+        hScatter = @(x,y)(ConstantVectorPotential(x,y, flux , cCircle_in ));
         %hgauge_field = @(x,y)(CircularGaugeField(x,y, flux, cCircle_in));        
-        hgauge_field = @(x,y)(ConstantGaugeField(x,y));        
+        %hgauge_field = @(x,y)(ConstantGaugeField(x,y));        
         
     end
 
@@ -558,7 +571,7 @@ end
 
 %% sets the output directory
     function setOutputDir()
-        resultsdir = ['ABS_spectral_H',num2str(height),'_W',num2str(width),'_flux',num2str(flux)];
+        resultsdir = ['ABS_spectral_H',num2str(height),'_W',num2str(width),'_flux',num2str(flux),'_Cin',num2str(Circ_in),'_Cout',num2str(Circ_out)];
         mkdir(resultsdir );
         outputdir = resultsdir;        
     end
