@@ -515,20 +515,23 @@ function fazis = Peierls_phase(obj, startpoint, endpoint)
     % the vector potential of such a magnetic field can be written as the
     % spatial derivative of a scalar potential A = grad(Phi), 
     % where Phi = C * angle
-
-    startpoint_complex  = startpoint(:,1) + 1i* startpoint(:,2);
-    endpoint_complex    = endpoint(:,1) + 1i* endpoint(:,2);
     
-    const = obj.Vectorpotential(1,1);
-    %const = 1;
+    consts = obj.Vectorpotential(1,1);
+    center_x = consts(2);
+    center_y = consts(3);
 
-    fazis = const * phase(startpoint_complex./ endpoint_complex);
+    startpoint_complex  = ( startpoint(:,1) - center_x ) + 1i* ( startpoint(:,2) - center_y );
+    endpoint_complex    = ( endpoint(:,1)   - center_x ) + 1i* ( endpoint(:,2) - center_y );
+    
+    consts = obj.Vectorpotential(1,1);
+
+    fazis = consts(1) * phase(startpoint_complex./ endpoint_complex);
 
     return
 
 end
 
-%%  
+%% CreateHandleForVectorpotential
 %> @brief Creates function handles for in-built Vector potentials in a gauge given by attribute #Opt.gauge.
 %> @return Returns A function handle
 function HandleForA = CreateHandleForVectorpotential( obj )    
