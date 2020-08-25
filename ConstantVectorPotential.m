@@ -17,9 +17,9 @@
 %> @brief Function describing constant vector potential
 %> @param x X coordinates of the sites.
 %> @return Returns with N x 2 array containing the x and y components of the vector potential. N is the number of sites.
-function ret = ConstantVectorPotential( x , y, flux )
+function ret = ConstantVectorPotential( x , y, flux , cCircle_in )
 
     % preallocating array
-    ret = flux/(2*pi);
+    ret = [ flux/(2*pi); cCircle_in.center.x; cCircle_in.center.y ];
     
 end
