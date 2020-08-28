@@ -37,7 +37,7 @@ end
     Circ_out=str2num(Circ_out);
     
     % The Fermi level in the contacts
-    EF = 0*0.2e-0;%-PotentialStrength;%0.25; % in eV
+    EF = 0.2e-0;%-PotentialStrength;%0.25; % in eV
     % imaginary part of the Fermi energy
     eta = 1e-8;
 
@@ -69,6 +69,8 @@ end
     % setting the Fermi energy in the superconducting lead
     param.Leads{1}.epsilon = param.Leads{1}.epsilon - EF;
     param.Leads{2}.epsilon = param.Leads{2}.epsilon - EF;
+
+    param.scatter.epsilon = param.scatter.epsilon - EF;
     
     param.Leads{1}.M = width;
     param.Leads{2}.M = width;
@@ -116,9 +118,20 @@ end
     cRibbon2 = Ribbon_hole('width', width, 'height', height, 'Opt', Opt, 'param', param, 'filenameOut', fullfile( outputdir, [outfilename, '.xml']), ...
                        'leadmodel', hLeadModel, 'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width); 
     % create handle for the piercing magnetic flux
-    CreateHandlesForMagneticField2( flux )              
-    ret = cRibbon2.Transport(0.1, 'gfininvfromHamiltonian', true)
-                 
+    CreateHandlesForMagneticField( flux )
+    ret = cRibbon2.Transport(0.1, 'gfininvfromHamiltonian', true);
+
+    CreateH = cRibbon2.CreateH();
+    coord = CreateH.Read('coordinates');
+    x=coord.x;
+    y=coord.y;
+
+    %plot(x,y,'x');
+    %daspect([1 1 1]);
+
+    %[hLead, hScatter, hgauge_field ] = createVectorPotential( flux );
+    %test_continuity( hLead, hScatter, hgauge_field, x , y ,cCircle_in, flux);
+
 %return            
 
     % creating the NTerminal class
@@ -160,7 +173,7 @@ end
         %Delta = 1e-3;
         Evec = (0*min(abs(Delta)):max(abs(Delta))/40:1.05*max(abs(Delta)));
         
-        phivec = 0.5:pi/70:pi; % 
+        phivec = 0:pi/70:pi; %
 
     end
 
@@ -171,7 +184,7 @@ end
         
         
         % Do the calculations
-        for idx = 1:length(phivec)-1
+        for idx = 1:length(phivec)
             phi = phivec(idx);
             
             % setting the phase difference
@@ -197,14 +210,13 @@ end
            
                
            % creating funcfion handles for the magnetic vector potentials
-           CreateHandlesForMagneticField2( flux )  
+           CreateHandlesForMagneticField( flux )
               
             
             % functio handle to pick the central sites in the scattering region
             hChoseSites = @ChoseSites;           
             
             parfor jdx=1:length(Evec)
-            %for jdx=1:length(Evec)
                 Energy = Evec(jdx);                 
                 
                  % create an instance of class DOS to calculate the density of states along the whole scattering region
@@ -321,18 +333,18 @@ end
     
         
         % perform gauge transformation
-        %[~, ~, hgauge_field ] = createVectorPotential( -flux );
+        [~, ~, hgauge_field ] = createVectorPotential( -flux );
         
         % retriving the corrdinates
-        %coordinates = cLead.Read('coordinates');
+        coordinates = cLead.Read('coordinates');
         
         % creating objet to perform gauge transformation
-        %cPeierls = Peierls(Opt);
+        cPeierls = Peierls(Opt);
         
-        %gsurf_inv = cLead.Read('gsurfinv');
+        gsurf_inv = cLead.Read('gsurfinv');
         
         
-        %gsurf_inv = cPeierls.gaugeTransformation( gsurf_inv, coordinates, hgauge_field );
+        gsurf_inv = cPeierls.gaugeTransformation( gsurf_inv, coordinates, hgauge_field );
         
         % saving the gauge transformed Greens function
         %cLead.Write('gsurfinv', gsurf_inv);
@@ -348,15 +360,8 @@ end
 %> @brief Creates and set function handles of the magnetic vector potentials in the Ribbon class
 %> @param B The magnetic field
     function CreateHandlesForMagneticField( flux )        
-        [hLead, hScatter, gauge_field ] = createVectorPotential( flux );        
-        cRibbon.setHandlesForMagneticField('scatter', hScatter, 'lead', hLead, 'gauge_field', gauge_field );          
-    end
-
-%% CreateHandlesForMagneticField
-%> @brief Creates and set function handles of the magnetic vector potentials in the Ribbon class
-%> @param B The magnetic field
-    function CreateHandlesForMagneticField2( flux )        
-        [hLead, hScatter ] = createVectorPotential( flux );        
+        [hLead, hScatter, gauge_field ] = createVectorPotential( flux );
+        cRibbon2.setHandlesForMagneticField('scatter', hScatter, 'lead', hLead, 'gauge_field', gauge_field );
         cRibbon2.setHandlesForMagneticField('scatter', hScatter, 'lead', hLead );          
     end
 
@@ -366,18 +371,18 @@ end
 %> @return [1] Function handle of the vector potential in the leads .
 %> @return [2] Function handle of the vector potential in the scattering region.
 %> @return [3] Function handle of the scalar potential that transforms vector potential in the scattering center into a vector potential in the leads.
-    function [hLead, hScatter ] = createVectorPotential( flux )
+    function [hLead, hScatter, hgauge_field ] = createVectorPotential( flux )
         
 		phi0 = h/qe;  
         
         % creting the funciton handles of the vector potentials
-        hLead = @(x,y)(zeroA(x,y));
+        hLead = @(x,y)(CircularVectorPotential(x,y, 0, cCircle_in));
         
         %hScatter = @(x,y)(CircularVectorPotential(x,y, flux, cCircle_in));
         hScatter = @(x,y)(ConstantVectorPotential(x,y, flux , cCircle_in ));
-        %hgauge_field = @(x,y)(CircularGaugeField(x,y, flux, cCircle_in));        
-        %hgauge_field = @(x,y)(ConstantGaugeField(x,y));        
-        
+        hgauge_field = @(x,y)(CircularGaugeField(x,y, flux, cCircle_in));
+        %hgauge_field = @(x,y)(ConstantGaugeField(x,y));
+
     end
 
 %% plotfunction
@@ -393,7 +398,7 @@ end
         end
         
         % creating figure in units of pixels
-        figure1 = figure( 'Units', 'Pixels', 'Visible', 'on', 'Colormap',...
+        figure1 = figure( 'Units', 'Pixels', 'Visible', 'on', 'visible' , 'off', 'Colormap', ...
     [0.0416666679084301 0 0;0.0833333358168602 0 0;0.125 0 0;0.16666667163372 0 0;0.20833332836628 0 0;0.25 0 0;0.291666656732559 0 0;0.333333343267441 0 0;0.375 0 0;0.416666656732559 0 0;0.458333343267441 0 0;0.5 0 0;0.541666686534882 0 0;0.583333313465118 0 0;0.625 0 0;0.666666686534882 0 0;0.708333313465118 0 0;0.75 0 0;0.791666686534882 0 0;0.833333313465118 0 0;0.875 0 0;0.916666686534882 0 0;0.958333313465118 0 0;1 0 0;1 0.0416666679084301 0;1 0.0833333358168602 0;1 0.125 0;1 0.16666667163372 0;1 0.20833332836628 0;1 0.25 0;1 0.291666656732559 0;1 0.333333343267441 0;1 0.375 0;1 0.416666656732559 0;1 0.458333343267441 0;1 0.5 0;1 0.541666686534882 0;1 0.583333313465118 0;1 0.625 0;1 0.666666686534882 0;1 0.708333313465118 0;1 0.75 0;1 0.791666686534882 0;1 0.833333313465118 0;1 0.875 0;1 0.916666686534882 0;1 0.958333313465118 0;1 1 0;1 1 0.0625;1 1 0.125;1 1 0.1875;1 1 0.25;1 1 0.3125;1 1 0.375;1 1 0.4375;1 1 0.5;1 1 0.5625;1 1 0.625;1 1 0.6875;1 1 0.75;1 1 0.8125;1 1 0.875;1 1 0.9375;1 1 1]);
         
         % font size on the figure will be 16 points
