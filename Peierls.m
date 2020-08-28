@@ -522,10 +522,8 @@ function fazis = Peierls_phase(obj, startpoint, endpoint)
 
     startpoint_complex  = ( startpoint(:,1) - center_x ) + 1i* ( startpoint(:,2) - center_y );
     endpoint_complex    = ( endpoint(:,1)   - center_x ) + 1i* ( endpoint(:,2) - center_y );
-    
-    consts = obj.Vectorpotential(1,1);
 
-    fazis = consts(1) * phase(startpoint_complex./ endpoint_complex);
+    fazis = consts(1) * phase( endpoint_complex./ startpoint_complex);
 
     return
 

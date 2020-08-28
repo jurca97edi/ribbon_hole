@@ -21,7 +21,7 @@
 		<vargamma value="1" description="Hopping parameter in the scattering region"/> 
 		<vargamma1 value="0.381" description="Hopping parameter between the layers in Bilayer Graphene"  effect="has effect if Hscatter=0"/> 
 		<End_Type value="A" description="Lead end type in case of hexagonal lattice" />	
-		<pair_potential abs="0.1" phase="1.2" description="Superconducting pair potential, with abs standing for the absolute value and phase for the complex phase" />
+		<pair_potential abs="0." phase="1.2" description="Superconducting pair potential, with abs standing for the absolute value and phase for the complex phase" />
 	</Scatter_region>
 
 
