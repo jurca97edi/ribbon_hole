@@ -4,7 +4,7 @@ if ~exist('filenum', 'var')
     filenum = 1;
 end
 	disp(['calculating ABS spectra as a function of the transverse momentum with file extension ', num2str(filenum)]);
-    
+
     filename = mfilename('fullpath');
     [directory, fncname] = fileparts( filename );
 
@@ -37,7 +37,7 @@ end
     Circ_out=str2num(Circ_out);
     
     % The Fermi level in the contacts
-    EF = 0.2e-0;%-PotentialStrength;%0.25; % in eV
+    EF = 0.2e-0;%-PotentialStrength in eV
     % imaginary part of the Fermi energy
     eta = 1e-8;
 
@@ -108,29 +108,39 @@ end
     density_of_states_upper_hole = zeros( length(Evec), length(phivec));
     density_of_states_lower_electron = zeros( length(Evec), length(phivec));
     density_of_states_lower_hole = zeros( length(Evec), length(phivec));
-    
-    
+
     % creating function handle for the Hamiltonians
     Opt.BdG = false;
-    
+
     hLeadModel = @LeadModel;
+
+    %Flux=0:0.05:10;
+
+    Conductance = zeros(length(flux),1);
+
+    cRibbon=[];
+
     % creating the NTerminal class
-    cRibbon2 = Ribbon_hole('width', width, 'height', height, 'Opt', Opt, 'param', param, 'filenameOut', fullfile( outputdir, [outfilename, '.xml']), ...
-                       'leadmodel', hLeadModel, 'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width); 
-    % create handle for the piercing magnetic flux
-    CreateHandlesForMagneticField( flux )
-    ret = cRibbon2.Transport(0.1, 'gfininvfromHamiltonian', true);
+    cRibbon = Ribbon_hole('width', width, 'height', height, 'Opt', Opt, 'param', param, 'filenameOut', fullfile( outputdir, [outfilename, '.xml']), ...
+                       'leadmodel', @LeadModel, 'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width);
+    for jdx=1:1
 
-    CreateH = cRibbon2.CreateH();
-    coord = CreateH.Read('coordinates');
-    x=coord.x;
-    y=coord.y;
+        % create handle for the piercing magnetic flux
+        CreateHandlesForMagneticField( flux(jdx) );
 
-    %plot(x,y,'x');
-    %daspect([1 1 1]);
+        cRibbon.Transport(0.1, 'gfininvfromHamiltonian', true);
+
+        Conductance(jdx) = cRibbon.Transport(1e-2, 'gfininvfromHamiltonian', true);
+        disp([ num2str(jdx/length(flux)*100),' % calculated of the conductance.'])
+
+    end
 
     %[hLead, hScatter, hgauge_field ] = createVectorPotential( flux );
     %test_continuity( hLead, hScatter, hgauge_field, x , y ,cCircle_in, flux);
+
+    ConductancePlot();
+
+    %ScatterPlot();
 
 %return            
 
@@ -143,7 +153,6 @@ end
     
     %cRibbon.Transport(1e-2, 'gfininvfromHamiltonian', true);
     
-       
     Opt.BdG = true; 
     
     % open parallel pool (if not opened already)
@@ -156,11 +165,9 @@ end
     % close parallel pool
     %parallelmanager.closePool();  
     
-  
+
     save( [outputdir,'/',outfilename, '.mat'], 'Evec', 'height', 'EF', 'density_of_states_upper_electron', 'phivec', ...
                 'density_of_states_upper_hole','density_of_states_lower_electron','density_of_states_lower_hole','flux' );
-
-
     
     EgeszAbra();    
 
@@ -172,17 +179,17 @@ end
     function [Evec, phivec] = setVectors()
         %Delta = 1e-3;
         Evec = (0*min(abs(Delta)):max(abs(Delta))/40:1.05*max(abs(Delta)));
+        %Evec = (0.5*min(abs(Delta)):max(abs(Delta))/100:0.6*max(abs(Delta)));
+        %Evec = 0.016:0.001:0.02;
         
-        phivec = 0:pi/70:pi; %
+        phivec = 0:pi/40:pi; %
 
     end
 
 %% CalculateSpectralDensity
 %> @brief Calculate the density of states
     function CalculateSpectralDensity()
-        
-        
-        
+
         % Do the calculations
         for idx = 1:length(phivec)
             phi = phivec(idx);
@@ -204,15 +211,15 @@ end
             Rho_lower_hole     = zeros( length(Evec), 1);
             
             % creating the NTerminal class
-             cRibbon = Ribbon_hole('width', width, 'height', height, 'Opt', Opt, 'param', param, 'filenameOut', fullfile( outputdir, [outfilename, '.xml']), ...
+            cRibbon = Ribbon_hole('width', width, 'height', height, 'Opt', Opt, 'param', param, 'filenameOut', fullfile( outputdir, [outfilename, '.xml']), ...
                      'leadmodel', hLeadModel, 'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width); 
-                
-           
                
-           % creating funcfion handles for the magnetic vector potentials
-           CreateHandlesForMagneticField( flux )
-              
-            
+            % creating funcfion handles for the magnetic vector potentials
+            CreateHandlesForMagneticField( flux )
+
+            %CreateH =cRibbon.CreateH();
+            %Hscatter = CreateH.Read('Hscatter');
+
             % functio handle to pick the central sites in the scattering region
             hChoseSites = @ChoseSites;           
             
@@ -267,7 +274,7 @@ end
             density_of_states_lower_hole(:,idx)     = Rho_lower_hole;
             
             % calculated data are plotted at each step
-            EgeszAbra( )
+            EgeszAbra()
             
             % exporting the calculated data
             save( [outputdir,'/',outfilename, '.mat'], 'Evec', 'height', 'EF', 'density_of_states_upper_electron', 'phivec', ...
@@ -286,7 +293,7 @@ end
 %> @brief insert Bz magnetic field into the leads
     function cLead = LeadModel( lead_idx, E, varargin )
         
-        p = inputParser;
+    p = inputParser;
     p.addParameter('createCore', 0);
     p.addParameter('Just_Create_Hamiltonians', 0);
     p.addParameter('shiftLead', 0);
@@ -328,11 +335,8 @@ end
                             'SelfEnergy', SelfEnergy, ...
                             'SurfaceGreensFunction', SurfaceGreensFunction);
     
-    
-    
-    
-        
         % perform gauge transformation
+        %[~, ~, hgauge_field ] = createVectorPotential( -flux(jdx) );
         [~, ~, hgauge_field ] = createVectorPotential( -flux );
         
         % retriving the corrdinates
@@ -342,16 +346,11 @@ end
         cPeierls = Peierls(Opt);
         
         gsurf_inv = cLead.Read('gsurfinv');
-        
-        
+
         gsurf_inv = cPeierls.gaugeTransformation( gsurf_inv, coordinates, hgauge_field );
         
         % saving the gauge transformed Greens function
-        %cLead.Write('gsurfinv', gsurf_inv);
-        
-               
-        
-            
+        cLead.Write('gsurfinv', gsurf_inv);
         
     end 
 
@@ -361,8 +360,8 @@ end
 %> @param B The magnetic field
     function CreateHandlesForMagneticField( flux )        
         [hLead, hScatter, gauge_field ] = createVectorPotential( flux );
-        cRibbon2.setHandlesForMagneticField('scatter', hScatter, 'lead', hLead, 'gauge_field', gauge_field );
-        cRibbon2.setHandlesForMagneticField('scatter', hScatter, 'lead', hLead );          
+        %cRibbon2.setHandlesForMagneticField('scatter', hScatter, 'lead', hLead, 'gauge_field', gauge_field );
+        cRibbon.setHandlesForMagneticField('scatter', hScatter, 'lead', hLead );
     end
 
 %% createVectorPotential
@@ -398,7 +397,7 @@ end
         end
         
         % creating figure in units of pixels
-        figure1 = figure( 'Units', 'Pixels', 'Visible', 'on', 'visible' , 'off', 'Colormap', ...
+        figure1 = figure( 'Units', 'Pixels', 'Visible', 'on', 'Colormap', ...
     [0.0416666679084301 0 0;0.0833333358168602 0 0;0.125 0 0;0.16666667163372 0 0;0.20833332836628 0 0;0.25 0 0;0.291666656732559 0 0;0.333333343267441 0 0;0.375 0 0;0.416666656732559 0 0;0.458333343267441 0 0;0.5 0 0;0.541666686534882 0 0;0.583333313465118 0 0;0.625 0 0;0.666666686534882 0 0;0.708333313465118 0 0;0.75 0 0;0.791666686534882 0 0;0.833333313465118 0 0;0.875 0 0;0.916666686534882 0 0;0.958333313465118 0 0;1 0 0;1 0.0416666679084301 0;1 0.0833333358168602 0;1 0.125 0;1 0.16666667163372 0;1 0.20833332836628 0;1 0.25 0;1 0.291666656732559 0;1 0.333333343267441 0;1 0.375 0;1 0.416666656732559 0;1 0.458333343267441 0;1 0.5 0;1 0.541666686534882 0;1 0.583333313465118 0;1 0.625 0;1 0.666666686534882 0;1 0.708333313465118 0;1 0.75 0;1 0.791666686534882 0;1 0.833333313465118 0;1 0.875 0;1 0.916666686534882 0;1 0.958333313465118 0;1 1 0;1 1 0.0625;1 1 0.125;1 1 0.1875;1 1 0.25;1 1 0.3125;1 1 0.375;1 1 0.4375;1 1 0.5;1 1 0.5625;1 1 0.625;1 1 0.6875;1 1 0.75;1 1 0.8125;1 1 0.875;1 1 0.9375;1 1 1]);
         
         % font size on the figure will be 16 points
@@ -571,8 +570,36 @@ end
         
         
     end
+    function ScatterPlot()
 
+        figure1 = figure( 'Units', 'Pixels', 'Visible', 'on' );
 
+        CreateH = cRibbon2.CreateH();
+        coord = CreateH.Read('coordinates');
+        x=coord.x;
+        y=coord.y;
+
+        plot(x,y,'x');
+        daspect([1 1 1]);
+
+        print('-dpng', [outputdir,'/scatterplot.png'])
+        close(figure1);
+
+    end
+
+    function ConductancePlot()
+
+        figure1 = figure( 'Units', 'Pixels', 'Visible', 'on' );
+
+        plot(flux,Conductance);
+        ylabel('Conductance');
+        xlabel('Flux');
+        title('Conductance of H=40, W=10 samples');
+
+        print('-dpng', [outputdir,'/conductance_plot.png'])
+        close(figure1);
+
+    end
 
 %% sets the output directory
     function setOutputDir()
