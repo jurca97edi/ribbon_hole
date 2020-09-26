@@ -97,7 +97,7 @@ end
     % the inner hole
     cCircle_in = structures('circle');
     cCircle_in.center.x = (width+1)/2;
-    cCircle_in.center.y = (height+1)/2;
+    cCircle_in.center.y = (height+1)*sqrt(3)/2;
     cCircle_in.radius = Circ_in*width;
     
     % outher circle
@@ -144,12 +144,25 @@ end
 
     end
     %}
+                       
+    %{
+    cRibbon.Transport(1e-2, 'gfininvfromHamiltonian', true);                       
     
-    %[hLead, hScatter, hgauge_field ] = createVectorPotential( flux );
-    %test_continuity( hLead, hScatter, hgauge_field, x , y ,cCircle_in, flux);
+    CreateH = cRibbon.CreateH();
+    coord = CreateH.Read('coordinates');
+    x=coord.x;
+    y=coord.y;
     
+    plot(x,y,'x');
+    daspect([1 1 1]);
+    
+    [hLead, hScatter, hgauge_field ] = createVectorPotential( flux );
+    test_continuity( hLead, hScatter, hgauge_field, x , y ,cCircle_in, flux);
+    %}
+                       
     % plot the coordinates of the scattering region
-    %ScatterPlot();return            
+    %ScatterPlot();
+    %return            
     
     % calculate the spectra of a slice with the give paramteres
     %Spectra();return
@@ -226,8 +239,8 @@ end
             hChoseSites = @ChoseSites;           
             hScatterPot = @ScatterPot;
             
-            %for jdx=1:length(Evec)
-            parfor jdx=1:length(Evec)
+            for jdx=1:length(Evec)
+            %parfor jdx=1:length(Evec)
                  Energy = Evec(jdx);                 
                 
                  % create an instance of class DOS to calculate the density of states along the whole scattering region
@@ -235,8 +248,8 @@ end
                  DOS_handles = DOS( Opt, 'junction', cRibbon, 'useSelfEnergy', false, 'scatterPotential', hScatterPot);
                  %DOS_handles = DOS( Opt, 'junction', cRibbon, 'useSelfEnergy', false);
                  
-                 CreateH = cRibbon.CreateH();
-                 Hscatter = CreateH.Read('Hscatter');
+                 %CreateH = cRibbon.CreateH();
+                 %Hscatter = CreateH.Read('Hscatter');
                  
                  % calculate the local DOS along the whole scattering region
                  cLocalDOS = DOS_handles.LocalDOSCalc( Energy+1i*eta, 'ChoseSites', hChoseSites  );
@@ -334,6 +347,8 @@ end
     Opt2.magnetic_field = false;
     cTransport_Interface = Transport_Interface(E, Opt2, param );
     
+    %[Opt2, param] = ValidateStructures( Opt2, param );
+    
     cLead = cTransport_Interface.SurfaceGreenFunctionCalculator( lead_idx, 'createCore', createCore, ...
                             'Just_Create_Hamiltonians', Just_Create_Hamiltonians, ...
                             'shiftLead', shiftLead, ...
@@ -368,30 +383,33 @@ end
     
         coordinates = CreateH.Read('coordinates');
         x = coordinates.x;
+        y = coordinates.y;
         BdG_u = coordinates.BdG_u;
 
         Hscatter = CreateH.Read('Hscatter');
         
         % sites on the right side of the scattering r.
-        sites2shift = x < cCircle_in.center.x; 
+        sites2shift = x >= cCircle_in.center.x; 
         
         % shift the on-site energy - take into account the BdG Ham.
-        Hscatter = Hscatter + ( sites2shift & BdG_u )*2*EF - ( sites2shift & ~BdG_u )*2*EF;
-        CreateH.Write('Hscatter', Hscatter);
+        Hscatter = Hscatter + sparse(diag ( ( sites2shift & BdG_u )*2*EF - ( sites2shift & ~BdG_u )*2*EF));
+        diagl= diag(Hscatter);
+        %CreateH.Write('Hscatter', Hscatter);
 
-        figure1 = figure('rend','painters','pos',[10 10 900 400]);
+        %figure1 = figure('rend','painters','pos',[10 10 900 400]);
   
-        plot(coordinates.x,coordinates.y,'o','MarkerSize',5,'color','k');
-        daspect([1 1 1])
+        %plot(coordinates.x,coordinates.y,'x','MarkerSize',5,'color','k');
+        %daspect([1 1 1])
 
-        fontsize=12;    
-        xlabel('x [a]','FontSize', fontsize,'FontName','Times New Roman');
-        ylabel('y [a]','FontSize', fontsize,'FontName','Times New Roman'); 
+        %fontsize=12;    
+        %xlabel('x [a]','FontSize', fontsize,'FontName','Times New Roman');
+        %ylabel('y [a]','FontSize', fontsize,'FontName','Times New Roman'); 
         
-        %print('-dpng', fullfile(outputdir,['Structure_',calculation_paramters(input,1,unitofm)]))
-        close(figure1);
+        %print('-dpng', fullfile(outputdir,['scatterplot']))
+        %close(figure1);
         
         ret = zeros(1,length(x));      
+        %ret = sparse(diag ( ( sites2shift & BdG_u )*2*EF - ( sites2shift & ~BdG_u )*2*EF));
     end
  
 
