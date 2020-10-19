@@ -1,4 +1,4 @@
-function ret = spectral_graphene( height, width, flux , Circ_in, Circ_out , EF )
+function spectral_graphene( height, width, flux , Circ_in, Circ_out , EF )
 
 if ~exist('filenum', 'var')
     filenum = 1;
@@ -40,8 +40,8 @@ end
     Circ_out=str2num(Circ_out);
     EF=str2num(EF);
     
-    % The Fermi level in the contacts
-    %EF = 0.2e-0;%-PotentialStrength in eV
+    % The Fermi level in the scattering region
+    %EF = 0.11;%2;%-PotentialStrength in eV
     % imaginary part of the Fermi energy
     eta = 1e-8;
 
@@ -71,6 +71,7 @@ end
     
     %dope the leads
     dope = 0.5;
+    %dope = EF;
     
     % setting the Fermi energy in the superconducting lead
     param.Leads{1}.epsilon = param.Leads{1}.epsilon - dope;
@@ -114,6 +115,9 @@ end
     density_of_states_upper_hole = zeros( length(Evec), length(phivec));
     density_of_states_lower_electron = zeros( length(Evec), length(phivec));
     density_of_states_lower_hole = zeros( length(Evec), length(phivec));
+    
+    polarization_upper = zeros( length(Evec), length(phivec));
+    polarization_lower = zeros( length(Evec), length(phivec));
 
     % creating function handle for the Hamiltonians
     Opt.BdG = false;
@@ -159,9 +163,9 @@ end
     [hLead, hScatter, hgauge_field ] = createVectorPotential( flux );
     test_continuity( hLead, hScatter, hgauge_field, x , y ,cCircle_in, flux);
     %}
-                       
+                                 
     % plot the coordinates of the scattering region
-    %ScatterPlot();
+    ScatterPlot();
     %return            
     
     % calculate the spectra of a slice with the give paramteres
@@ -171,10 +175,14 @@ end
     
     % open parallel pool (if not opened already)
     parallelmanager = Parallel( Opt );
-    %parallelmanager.openPool();     
+    %parallelmanager.openPool();
+    
+    tic
     
     % calculate the density of states
     CalculateSpectralDensity();
+    
+    toc
     
     % close parallel pool
     %parallelmanager.closePool();  
@@ -183,8 +191,9 @@ end
     save( [outputdir,'/',outfilename, '.mat'], 'Evec', 'height', 'EF', 'density_of_states_upper_electron', 'phivec', ...
                 'density_of_states_upper_hole','density_of_states_lower_electron','density_of_states_lower_hole','flux' );
     
-    EgeszAbra();    
-
+    EgeszAbra(); 
+    
+    EgeszAbraP(); 
 
 %% SetVectors
 %> @brief Sets the energy and transverse quantum number grid points
@@ -193,11 +202,12 @@ end
     function [Evec, phivec] = setVectors()
         %Delta = 1e-3;
         %Evec = (0*min(abs(Delta)):max(abs(Delta))/100:1.05*max(abs(Delta)));
-        Evec = (0*min(abs(Delta)):max(abs(Delta))/50:1.05*max(abs(Delta)));
-        %Evec = (0.5*min(abs(Delta)):max(abs(Delta))/100:0.65*max(abs(Delta)));
+        %Evec = (0*min(abs(Delta)):max(abs(Delta))/80:1.05*max(abs(Delta)));
+        Evec = EF - 0.02:0.04/80:EF + 0.02;
+        %Evec = (0.4*min(abs(Delta)):max(abs(Delta))/50:0.8*max(abs(Delta)));
         
         %phivec = 0:pi/100:pi;
-        phivec = 0:pi/50:pi;
+        phivec = 0:pi/80:pi;
 
     end
 
@@ -242,7 +252,7 @@ end
             for jdx=1:length(Evec)
             %parfor jdx=1:length(Evec)
                  Energy = Evec(jdx);                 
-                
+                 
                  % create an instance of class DOS to calculate the density of states along the whole scattering region
                  % modify Hamiltonian of the scattering r.
                  DOS_handles = DOS( Opt, 'junction', cRibbon, 'useSelfEnergy', false, 'scatterPotential', hScatterPot);
@@ -291,11 +301,19 @@ end
             
             density_of_states_upper_electron(:,idx) = Rho_upper_electron;
             density_of_states_upper_hole(:,idx)     = Rho_upper_hole;
+            denominator = Rho_upper_electron + Rho_upper_hole;
+            denominator ( denominator == 0 ) = 1;
+            polarization_upper(:,idx) = ( Rho_upper_electron - Rho_upper_hole )./ denominator ;
+            
             density_of_states_lower_electron(:,idx) = Rho_lower_electron;
             density_of_states_lower_hole(:,idx)     = Rho_lower_hole;
+            denominator = Rho_lower_electron + Rho_lower_hole;
+            denominator ( denominator == 0 ) = 1;
+            polarization_lower(:,idx) = ( Rho_lower_electron - Rho_lower_hole )./ denominator ;
             
             % calculated data are plotted at each step
             EgeszAbra()
+            EgeszAbraP()
             
             % exporting the calculated data
             save( [outputdir,'/',outfilename, '.mat'], 'Evec', 'height', 'EF', 'density_of_states_upper_electron', 'phivec', ...
@@ -392,9 +410,8 @@ end
         sites2shift = x >= cCircle_in.center.x; 
         
         % shift the on-site energy - take into account the BdG Ham.
-        Hscatter = Hscatter + sparse(diag ( ( sites2shift & BdG_u )*2*EF - ( sites2shift & ~BdG_u )*2*EF));
-        diagl= diag(Hscatter);
-        %CreateH.Write('Hscatter', Hscatter);
+        Hscatter = Hscatter + sparse(1:length(x),1:length(x),( sites2shift & BdG_u )*2*EF - ( sites2shift & ~BdG_u )*2*EF,length(x),length(x));
+        CreateH.Write('Hscatter', Hscatter);
 
         %figure1 = figure('rend','painters','pos',[10 10 900 400]);
   
@@ -419,7 +436,7 @@ end
     function CreateHandlesForMagneticField( flux )        
         [hLead, hScatter, gauge_field ] = createVectorPotential( flux );
         %cRibbon.setHandlesForMagneticField('scatter', hScatter, 'lead', hLead, 'gauge_field', gauge_field );
-        cRibbon.setHandlesForMagneticField('scatter', hScatter, 'lead', hLead );
+        cRibbon.setHandlesForMagneticField('scatter', hScatter );
     end
 
 %% createVectorPotential
@@ -453,7 +470,7 @@ end
         end
         
         % creating figure in units of pixels
-        figure1 = figure( 'Units', 'Pixels', 'Visible', 'off', 'Colormap', ...
+        figure1 = figure( 'Units', 'Pixels', 'Visible', 'off', 'Colormap', ... % summer, 'pos',[10 10 900 700] );%, ...
     [0.0416666679084301 0 0;0.0833333358168602 0 0;0.125 0 0;0.16666667163372 0 0;0.20833332836628 0 0;0.25 0 0;0.291666656732559 0 0;0.333333343267441 0 0;0.375 0 0;0.416666656732559 0 0;0.458333343267441 0 0;0.5 0 0;0.541666686534882 0 0;0.583333313465118 0 0;0.625 0 0;0.666666686534882 0 0;0.708333313465118 0 0;0.75 0 0;0.791666686534882 0 0;0.833333313465118 0 0;0.875 0 0;0.916666686534882 0 0;0.958333313465118 0 0;1 0 0;1 0.0416666679084301 0;1 0.0833333358168602 0;1 0.125 0;1 0.16666667163372 0;1 0.20833332836628 0;1 0.25 0;1 0.291666656732559 0;1 0.333333343267441 0;1 0.375 0;1 0.416666656732559 0;1 0.458333343267441 0;1 0.5 0;1 0.541666686534882 0;1 0.583333313465118 0;1 0.625 0;1 0.666666686534882 0;1 0.708333313465118 0;1 0.75 0;1 0.791666686534882 0;1 0.833333313465118 0;1 0.875 0;1 0.916666686534882 0;1 0.958333313465118 0;1 1 0;1 1 0.0625;1 1 0.125;1 1 0.1875;1 1 0.25;1 1 0.3125;1 1 0.375;1 1 0.4375;1 1 0.5;1 1 0.5625;1 1 0.625;1 1 0.6875;1 1 0.75;1 1 0.8125;1 1 0.875;1 1 0.9375;1 1 1]);
         
         % font size on the figure will be 16 points
@@ -626,7 +643,115 @@ end
         
         
     end
+    function EgeszAbraP()
 
+% ********************** plot the DOS ***********************
+
+        % determine points to be plotted
+        indexes = logical( polarization_upper(1,:));
+        
+        if length(phivec(indexes)) < 2
+            return
+        end
+        
+        % creating figure in units of pixels
+        figure1 = figure( 'Units', 'Pixels', 'Visible', 'off', 'Colormap', summer, 'pos',[10 10 900 700] );
+    %[0.0416666679084301 0 0;0.0833333358168602 0 0;0.125 0 0;0.16666667163372 0 0;0.20833332836628 0 0;0.25 0 0;0.291666656732559 0 0;0.333333343267441 0 0;0.375 0 0;0.416666656732559 0 0;0.458333343267441 0 0;0.5 0 0;0.541666686534882 0 0;0.583333313465118 0 0;0.625 0 0;0.666666686534882 0 0;0.708333313465118 0 0;0.75 0 0;0.791666686534882 0 0;0.833333313465118 0 0;0.875 0 0;0.916666686534882 0 0;0.958333313465118 0 0;1 0 0;1 0.0416666679084301 0;1 0.0833333358168602 0;1 0.125 0;1 0.16666667163372 0;1 0.20833332836628 0;1 0.25 0;1 0.291666656732559 0;1 0.333333343267441 0;1 0.375 0;1 0.416666656732559 0;1 0.458333343267441 0;1 0.5 0;1 0.541666686534882 0;1 0.583333313465118 0;1 0.625 0;1 0.666666686534882 0;1 0.708333313465118 0;1 0.75 0;1 0.791666686534882 0;1 0.833333313465118 0;1 0.875 0;1 0.916666686534882 0;1 0.958333313465118 0;1 1 0;1 1 0.0625;1 1 0.125;1 1 0.1875;1 1 0.25;1 1 0.3125;1 1 0.375;1 1 0.4375;1 1 0.5;1 1 0.5625;1 1 0.625;1 1 0.6875;1 1 0.75;1 1 0.8125;1 1 0.875;1 1 0.9375;1 1 1]);
+        
+        % font size on the figure will be 16 points
+        fontsize = 12;        
+        
+        % define the colorbar limits
+        mins_tmp = [ min(min(real(polarization_upper))), min(min(real(polarization_lower)))];
+        maxs_tmp = [ max(max(real(polarization_upper))), max(max(real(polarization_lower)))];
+        
+        colbarlimits = [min(mins_tmp) ,max(maxs_tmp)];
+        
+        % define the axis limits
+        x_lim = [min(phivec) max(phivec)];
+        y_lim = [min(Evec) max(Evec)]/min(abs(Delta));
+        
+        
+        axes_DOS_upper = axes('Parent',figure1, ...
+                'Visible', 'on',...
+                'FontSize', fontsize,... 
+                'xlim', x_lim,...           
+                'ylim', y_lim,...      
+                'CLim', colbarlimits, ...
+                'Box', 'on',...
+                'Units', 'Pixels', ...
+                'FontName','Times New Roman');
+        hold on; 
+        
+        % plot the data
+        [X,Y] = meshgrid( phivec(indexes), Evec );
+        levelnum = 50;
+        density_of_states2plot = real(polarization_upper(:,indexes));
+        db=1;
+        contour(X(1:db:end,1:db:end), Y(1:db:end,1:db:end)/min(abs(Delta)), density_of_states2plot(1:db:end,1:db:end), levelnum ,'LineStyle','none','Fill','on',...   'LevelList',[0.2391 0.2866 0.3342 0.3817 0.4293 0.4769 0.5244 0.572 0.6195 0.6671 0.7147 0.7622 0.8098 0.8573 0.9049 0.9524],...
+           'Parent', axes_DOS_upper);
+       
+        
+        % Create xlabel
+        xlabel('\Phi','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper);
+        
+        % Create ylabel
+        ylabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper);
+        
+        
+        
+        
+        %---------------------------------------------------------------
+
+        axes_DOS_lower = axes('Parent',figure1, ...
+                'Visible', 'on',...
+                'FontSize', fontsize,... 
+                'xlim', x_lim,...           
+                'ylim', y_lim,...      
+                'CLim', colbarlimits, ...
+                'Box', 'on',...
+                'Units', 'Pixels', ...
+                'FontName','Times New Roman');
+        hold on; 
+        
+        % plot the data
+        [X,Y] = meshgrid( phivec(indexes), Evec );
+        levelnum = 50;
+        density_of_states2plot = real(polarization_lower(:,indexes));
+        db=1;
+        contour(X(1:db:end,1:db:end), Y(1:db:end,1:db:end)/min(abs(Delta)), density_of_states2plot(1:db:end,1:db:end), levelnum ,'LineStyle','none','Fill','on',...   'LevelList',[0.2391 0.2866 0.3342 0.3817 0.4293 0.4769 0.5244 0.572 0.6195 0.6671 0.7147 0.7622 0.8098 0.8573 0.9049 0.9524],...
+           'Parent', axes_DOS_lower);
+        
+        % Create xlabel
+        xlabel('\Phi','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower);
+        
+        % Create ylabel
+        ylabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower);
+        
+        % setting figure position
+        figure_pos = get( figure1, 'Position' );
+        
+        %set the position of the axes_DOS
+        OuterPosition = get(axes_DOS_upper, 'OuterPosition');
+        OuterPosition(1) = 0;
+        OuterPosition(2) = figure_pos(4)/2;
+        OuterPosition(3) = figure_pos(3)/2;
+        OuterPosition(4) = figure_pos(4)/2;
+        set(axes_DOS_upper, 'OuterPosition', OuterPosition);  
+        
+        %set the position of the axes_pot
+        OuterPosition = get(axes_DOS_lower, 'OuterPosition');
+        OuterPosition(1) = figure_pos(3)/2;
+        OuterPosition(2) = figure_pos(4)/2;
+        OuterPosition(3) = figure_pos(3)/2;
+        OuterPosition(4) = figure_pos(4)/2;
+        set(axes_DOS_lower, 'OuterPosition', OuterPosition);  
+        
+        print('-depsc2', [outputdir,'/',outfilename,'_polarization.eps'])
+        close(figure1);
+        
+        
+    end
 % plot the scattering region 
     function ScatterPlot()
 
@@ -669,14 +794,14 @@ end
         HLead=CreateLeadHamiltonians(Opt, param, 'Hanyadik_Lead', 1, 'q',0);
         HLead.CreateHamiltonians();
 
-        k_points=100;
+        k_points=300;
         db=20;
         k_lim=int16(db*(k_points+1)/2);
 
         [SpectrumData2]=HLead.CalcSpektrum('ka_num',k_points,'db',db,'offset',0,'calcWaveFnc',false);
 
-        plot(SpectrumData2(1:k_lim*2),SpectrumData2(k_lim*2+1:k_lim*4),'.','MarkerSize', 10);%, 'color', [1 0 0]);  
-        ylim([-2 2]);
+        plot(SpectrumData2(1:k_lim*2),SpectrumData2(k_lim*2+1:k_lim*4),'+','MarkerSize', 10);%, 'color', [1 0 0]);  
+        %ylim([-2 2]);
 
         Opt.BdG = true; 
 
@@ -689,7 +814,10 @@ end
 
         [SpectrumData2]=HLead.CalcSpektrum('ka_num',k_points,'db',db,'offset',0,'calcWaveFnc',false);
 
-        plot(SpectrumData2(1:k_lim*2),SpectrumData2(k_lim*2+1:k_lim*4),'.','MarkerSize', 5);%, 'color', [1 0 0]);  
+        plot(SpectrumData2(1:k_lim*2),SpectrumData2(k_lim*2+1:k_lim*4),'x','MarkerSize', 5);%, 'color', [1 0 0]);  
+
+        ylim([-2*dope 2*dope]);
+        legend('Normal - w/ dope','Supra - w/ dope');
  
     end
 
