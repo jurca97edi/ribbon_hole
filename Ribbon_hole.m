@@ -223,45 +223,53 @@ end
         Interface_Region.Write( 'coordinates', Lead.Read('coordinates'));
         Interface_Region.Write( 'kulso_szabfokok', Lead.Read('kulso_szabfokok'));
         Interface_Region.Write( 'OverlapApplied', true);
-        
+
         coordinates_shift = [1, -1 ]; %relative to the leads
-        Interface_Region.ShiftCoordinates( coordinates_shift(idx) );  
-        
+        Interface_Region.ShiftCoordinates( coordinates_shift(idx) );
+
         % determine the coupling between the interface and the scattering region
         coordinates_interface = Interface_Region.Read('coordinates');
-        
-               
-            
+
+        edge_regions = sparse(coordinates_scatter.y < min(coordinates_scatter.y) + 2 | coordinates_scatter.y > max(coordinates_scatter.y) - 2);
+%{
         % now determine the site-pair distances
         distance_x = ( (coordinates_interface.x)*ones( size(coordinates_scatter.x') ) - ...
                        ones( size(coordinates_interface.x) )*(coordinates_scatter.x') ).^2;
-                   
         distance_y = ( (coordinates_interface.y)*ones( size(coordinates_scatter.y') ) - ...
                        ones( size(coordinates_interface.y) )*(coordinates_scatter.y') ).^2;
-                   
-                   
+
+        indexes = (distance_x + distance_y <= 1.01^2);
+ %}
+%{a
+        distance_x = ( sparse(coordinates_interface.x)*( edge_regions' ) - ...
+                       sparse(ones( size(coordinates_interface.x) ) )*( coordinates_scatter.x.*edge_regions )' ).^2; 
+        distance_y = ( sparse(coordinates_interface.y)*( edge_regions' )   - ...
+                       sparse(ones( size(coordinates_interface.y) ) )*( coordinates_scatter.y.*edge_regions )' ).^2;
+
         % now determine the site pairs that are closer to each other than the 1.1x(atom-atom distance)
-        indexes = distance_x + distance_y <= 1.01^2;
-            
-%         figure 
-%         plot( coordinates_scatter.x, coordinates_scatter.y, 'bx')
-%         hold on 
-%         plot( coordinates_interface.x, coordinates_interface.y, 'rx')
-% 
-%             for jdx = 1:size(indexes,1)
-%                scatter_x = coordinates_scatter.x(indexes(jdx,:));
-%                scatter_y = coordinates_scatter.y(indexes(jdx,:));
-%                interface_x = coordinates_interface.x(jdx)*ones(size(scatter_x));
-%                interface_y = coordinates_interface.y(jdx)*ones(size(scatter_y));
-%                plot( [scatter_x'; interface_x'], [scatter_y'; interface_y'], 'k' ) 
-%             end
-            
+        indexes = (distance_x + distance_y <= 1.01^2) & (distance_x + distance_y > 0);
+%}
+         figure
+         plot( coordinates_scatter.x, coordinates_scatter.y, 'bx')
+         hold on
+         plot( coordinates_interface.x, coordinates_interface.y, 'rx')
+
+             for jdx = 1:size(indexes,1)
+                scatter_x = coordinates_scatter.x(indexes(jdx,:));
+                scatter_y = coordinates_scatter.y(indexes(jdx,:));
+                interface_x = coordinates_interface.x(jdx)*ones(size(scatter_x));
+                interface_y = coordinates_interface.y(jdx)*ones(size(scatter_y));
+                plot( [scatter_x'; interface_x'], [scatter_y'; interface_y'], 'k' )
+             end
+
         % first determine the coupling constant 
         params = Interface_Region.Read('params');
         coupling_constant = params.vargamma;       
-           
+
         % now construct the coupling matrices
         Hcoupling = sparse(coupling_constant*indexes);
+
+        whos
         if ~isempty( coordinates_interface.BdG_u )
             Hcoupling( ~coordinates_interface.BdG_u, ~coordinates_scatter.BdG_u ) = -Hcoupling( ~coordinates_interface.BdG_u, ~coordinates_scatter.BdG_u );
             Hcoupling( ~coordinates_interface.BdG_u, coordinates_scatter.BdG_u ) = 0;
@@ -310,7 +318,6 @@ end
         end
         
         Interface_Region.Calc_Effective_Hamiltonians( 0, 'Lead', Lead );
-        
     end
 
 
