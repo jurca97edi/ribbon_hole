@@ -1,1 +1,1 @@
-a
+We try to model a system where Cooper pair splitting is possible. To do this, we use a sample of graphene monolayer shaped like a donought, that we place between two superconducting graphene monolayer leads. Under the superconducting gap, we obtain Andreev Bound states in the graphene donought. To split the electrons from the holes, we shift the on-site potentials of the two side of the sample, such that each side favors either electrons or holes.
