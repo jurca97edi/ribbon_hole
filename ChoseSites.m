@@ -4,27 +4,42 @@
 %> @return Returns with an array of logical values to label the indexes to be kept.
     function center_sites = ChoseSites( coords )
         %ribbon_length = (max(coords.y) - min(coords.y));
-        center_sites = abs(coords.y - mean(coords.y)) < norm(coords.a)/4 +0.001;
-        %unique_x = unique(coords.x)
-        %end_sites = unique_x(1:2);
-        %uneven_site = (mod(coords.x - end_sites(1),3) == 0) | (mod(coords.x - end_sites(2),3) == 0);
-        %plot(coords.x,coords.y,'x')
-        %hold on
-        %plot(coords.x(center_sites),coords.y(center_sites),'x')
+      
+        center_sites = abs(coords.y - mean(coords.y)) < norm(coords.a)/4;
+    
+        figure1 = figure('rend','painters','pos',[10 10 1200 800]);
         
-        right_min = min(coords.x(coords.x > mean(coords.x)));
-        right_max = max(coords.x(coords.x > mean(coords.x)));
-        center_right = (right_min + right_max)/2;
+        plot(coords.x,coords.y,'x')
+        hold on
+%{      
+%        right_min = min(coords.x(coords.x > mean(coords.x) & center_sites));
+%        right_max = max(coords.x(coords.x > mean(coords.x) & center_sites));
+%        center_right = (right_min + right_max)/2;
         
-        left_min = min(coords.x(coords.x < mean(coords.x)));
-        left_max = max(coords.x(coords.x < mean(coords.x)));
-        center_left = (left_min + left_max)/2;
+%        left_min = min(coords.x(coords.x < mean(coords.x) & center_sites));
+%        left_max = max(coords.x(coords.x < mean(coords.x) & center_sites));
+%        center_left = (left_min + left_max)/2;
+%}        
+        right = max( coords.x );
+        left = min( coords.x );
         
-        center_sites = center_sites & ( abs(coords.x - center_right) < 30 | abs(coords.x -center_left) < 30 );
+        %original
+        %center_sites = abs(coords.y - mean(coords.y)) < 0.01*ribbon_length;
         
-        %center_sites = center_sites & uneven_site;
-        %center_sites2 = coords.y == mean(coords.y);
-        %plot(coords.x(center_sites),coords.y(center_sites),'x')
+        center_sites = center_sites & ( abs(coords.x - right) < 60 | abs(coords.x - left) < 60 );
         
-        %plot(coords.x(uneven_site),coords.y(uneven_site),'x')
+        % choosing sites in the center
+        %center_sites = center_sites & ( coords.x < center_right & coords.x > center_left );
+        
+        %choosing sites at the edges
+        %center_sites = center_sites & ( coords.x > center_right | coords.x < center_left );
+        %sum(center_sites)
+%{a
+        plot(coords.x(center_sites),coords.y(center_sites),'x')
+        
+        height = ( max(coords.y) - min(coords.y ))/sqrt(3)+0.5;
+                
+        print('-dpng', ['ChoseSites_H',num2str(height),'.png'])
+        close(figure1);
+%}
     end
