@@ -1,4 +1,4 @@
-function spectral_graphene( height, width, flux , Circ_in, Circ_out , EF )
+function spectral_graphene( height, width, flux , Circ_in, Circ_out , EF , location, resolution)
 
 if ~exist('filenum', 'var')
     filenum = 1;
@@ -33,12 +33,21 @@ end
         EF = 0.2;
     end
     
+    if ~exist('location', 'var')
+        location = 'outer';
+    end
+    
+    if ~exist('resolution', 'var')
+        resolution = '80';
+    end
+    
     height=str2num(height);
     width=str2num(width);
     flux=str2num(flux);
     Circ_in=str2num(Circ_in);
     Circ_out=str2num(Circ_out);
     EF=str2num(EF);
+    resolution=str2num(resolution);
     
     % The Fermi level in the scattering region
     %EF = 0.11;%2;%-PotentialStrength in eV
@@ -63,23 +72,29 @@ end
     outputdir   = [];
     
     % The input and output XML files
-    inputXML = 'Graphene_Input.xml';
+    %inputXML = 'Graphene_Input.xml';
+    inputXML = 'Graphene_Input_noDelta.xml';
     outputXML = [outfilename,'.xml'];
     
     % Loading the input parameters
     [Opt, param] = parseInput( inputXML );
     
-    %dope the leads
-    dope = 0.5;
-    %dope = EF;
+    %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+    %dope the leads, usally 1
+    dope = 1;%.5;
     
     % setting the Fermi energy in the superconducting lead
     param.Leads{1}.epsilon = param.Leads{1}.epsilon - dope;
     param.Leads{2}.epsilon = param.Leads{2}.epsilon - dope;
     
-    %shift all epsilons to Fermi energy EF
-    param.scatter.epsilon = param.scatter.epsilon - EF;
-    %param.scatter.epsilon = param.scatter.epsilon - 0.1;
+    %set to 0.5 for most calculations
+    %shift all epsilon
+    
+    mu_N = 0.5;
+    
+    param.scatter.epsilon = param.scatter.epsilon - mu_N;
+    
+    %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     param.Leads{1}.M = width;
     param.Leads{2}.M = width;
@@ -187,7 +202,6 @@ end
     % close parallel pool
     %parallelmanager.closePool();  
     
-
     save( [outputdir,'/',outfilename, '.mat'], 'Evec', 'height', 'EF', 'density_of_states_upper_electron', 'phivec', ...
                 'density_of_states_upper_hole','density_of_states_lower_electron','density_of_states_lower_hole','flux' );
     
@@ -202,12 +216,13 @@ end
     function [Evec, phivec] = setVectors()
         %Delta = 1e-3;
         %Evec = (0*min(abs(Delta)):max(abs(Delta))/100:1.05*max(abs(Delta)));
-        %Evec = (0*min(abs(Delta)):max(abs(Delta))/80:1.05*max(abs(Delta)));
-        Evec = EF - 0.02:0.04/80:EF + 0.02;
+        %Evec = (0*min(abs(Delta)):max(abs(Delta))/resolution:1.05*max(abs(Delta)));
+        Delta_E = 0.001;        
+        Evec = EF - Delta_E:2*Delta_E/resolution:EF + Delta_E;
         %Evec = (0.4*min(abs(Delta)):max(abs(Delta))/50:0.8*max(abs(Delta)));
         
-        %phivec = 0:pi/100:pi;
-        phivec = 0:pi/80:pi;
+        phivec_length = pi;
+        phivec = 0:phivec_length/resolution:phivec_length;
 
     end
 
@@ -237,29 +252,28 @@ end
             % creating the NTerminal class
             cRibbon = Ribbon_hole('width', width, 'height', height, 'Opt', Opt, 'param', param, 'filenameOut', fullfile( outputdir, [outfilename, '.xml']), ...
                      'leadmodel', hLeadModel, 'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width); 
-            
-            % modify Hamiltonian of the scattering r.
-            %CreateH = cRibbon.CreateH();
-            %cRibbon.ApplyPotentialInScatter( CreateH, @ScatterPot);   
                
             % creating funcfion handles for the magnetic vector potentials
             CreateHandlesForMagneticField( flux )
 
             % functio handle to pick the central sites in the scattering region
-            hChoseSites = @ChoseSites;           
+            switch(location)
+                case 'outer'
+                    hChoseSites = @ChoseSitesOuter;
+                case 'center'
+                    hChoseSites = @ChoseSitesCenter;
+                case 'inner'
+                    hChoseSites = @ChoseSitesInner;
+            end
+            %hChoseSites = @ChoseSites;           
             hScatterPot = @ScatterPot;
             
-            for jdx=1:length(Evec)
-            %parfor jdx=1:length(Evec)
+            %for jdx=1:length(Evec)
+            parfor jdx=1:length(Evec)
                  Energy = Evec(jdx);                 
                  
                  % create an instance of class DOS to calculate the density of states along the whole scattering region
-                 % modify Hamiltonian of the scattering r.
                  DOS_handles = DOS( Opt, 'junction', cRibbon, 'useSelfEnergy', false, 'scatterPotential', hScatterPot);
-                 %DOS_handles = DOS( Opt, 'junction', cRibbon, 'useSelfEnergy', false);
-                 
-                 %CreateH = cRibbon.CreateH();
-                 %Hscatter = CreateH.Read('Hscatter');
                  
                  % calculate the local DOS along the whole scattering region
                  cLocalDOS = DOS_handles.LocalDOSCalc( Energy+1i*eta, 'ChoseSites', hChoseSites  );
@@ -403,30 +417,41 @@ end
         x = coordinates.x;
         y = coordinates.y;
         BdG_u = coordinates.BdG_u;
-
+        
         Hscatter = CreateH.Read('Hscatter');
         
         % sites on the right side of the scattering r.
-        sites2shift = x >= cCircle_in.center.x; 
+        sites2shift_right = x >= cCircle_in.center.x & abs( y - cCircle_in.center.y ) < 20; % 1 unit dist. is 0.142 nm
+        sites2shift_left  = x  < cCircle_in.center.x & abs( y - cCircle_in.center.y ) < 20; 
         
         % shift the on-site energy - take into account the BdG Ham.
-        Hscatter = Hscatter + sparse(1:length(x),1:length(x),( sites2shift & BdG_u )*2*EF - ( sites2shift & ~BdG_u )*2*EF,length(x),length(x));
+        Hscatter = Hscatter + sparse(1:length(x),1:length(x), ( sites2shift_right & BdG_u )*( EF + mu_N ) - ( sites2shift_right & ~BdG_u )*( EF + mu_N ),length(x),length(x)) ...
+                            + sparse(1:length(x),1:length(x), ( sites2shift_left & BdG_u )*( -EF + mu_N ) - ( sites2shift_left & ~BdG_u )*( -EF + mu_N ),length(x),length(x));
+        %Hscatter = Hscatter + sparse(1:length(x),1:length(x), ( sites2shift_right & BdG_u )*( mu_N ) - ( sites2shift_right & ~BdG_u )*( mu_N ),length(x),length(x)) ...
+        %                    + sparse(1:length(x),1:length(x), ( sites2shift_left & BdG_u )*(  mu_N ) - ( sites2shift_left & ~BdG_u )*(  mu_N ),length(x),length(x));
+                        
+        %% DO WE INCLUDE SHIFT?
         CreateH.Write('Hscatter', Hscatter);
-
-        %figure1 = figure('rend','painters','pos',[10 10 900 400]);
+        %%
+%{
+        figure1 = figure('rend','painters','pos',[10 10 900 400]);
   
-        %plot(coordinates.x,coordinates.y,'x','MarkerSize',5,'color','k');
-        %daspect([1 1 1])
+        plot(coordinates.x,coordinates.y,'x','MarkerSize',5,'color','k');
+        hold on
+        plot(coordinates.x( sites2shift_right ),coordinates.y(sites2shift_right),'x','MarkerSize',5,'color','r');
+        plot(coordinates.x( sites2shift_left ),coordinates.y(sites2shift_left),'x','MarkerSize',5,'color','b');
+        daspect([1 1 1])
 
-        %fontsize=12;    
-        %xlabel('x [a]','FontSize', fontsize,'FontName','Times New Roman');
-        %ylabel('y [a]','FontSize', fontsize,'FontName','Times New Roman'); 
+        fontsize=12;    
+        xlabel('x [a]','FontSize', fontsize,'FontName','Times New Roman');
+        ylabel('y [a]','FontSize', fontsize,'FontName','Times New Roman'); 
         
-        %print('-dpng', fullfile(outputdir,['scatterplot']))
-        %close(figure1);
+        legend('Scattering region','Shift by +EF', 'Shift by -EF');
         
+        print('-dpng', fullfile(outputdir,['scatterplot']))
+        close(figure1);
+%}        
         ret = zeros(1,length(x));      
-        %ret = sparse(diag ( ( sites2shift & BdG_u )*2*EF - ( sites2shift & ~BdG_u )*2*EF));
     end
  
 
@@ -436,7 +461,7 @@ end
     function CreateHandlesForMagneticField( flux )        
         [hLead, hScatter, gauge_field ] = createVectorPotential( flux );
         %cRibbon.setHandlesForMagneticField('scatter', hScatter, 'lead', hLead, 'gauge_field', gauge_field );
-        cRibbon.setHandlesForMagneticField('scatter', hScatter );
+        cRibbon.setHandlesForMagneticField( 'scatter', hScatter );
     end
 
 %% createVectorPotential
@@ -477,11 +502,14 @@ end
         fontsize = 12;        
         
         % define the colorbar limits
+        %min(min(real(log(density_of_states_upper_electron))))
+        %max(max(real(log(density_of_states_upper_electron))))
         colbarlimits = [min(min(real(log(density_of_states_upper_electron)))) max(max(real(log(density_of_states_upper_electron))))];
         
         % define the axis limits
         x_lim = [min(phivec) max(phivec)];
         y_lim = [min(Evec) max(Evec)]/min(abs(Delta));
+        %y_lim = [min(Evec) max(Evec)]/0.1;%the usual value of Delta
         
         
         axes_DOS_upper_electron = axes('Parent',figure1, ...
@@ -509,7 +537,6 @@ end
         
         % Create ylabel
         ylabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_electron);
-        
         
         
         
@@ -662,14 +689,15 @@ end
         fontsize = 12;        
         
         % define the colorbar limits
-        mins_tmp = [ min(min(real(polarization_upper))), min(min(real(polarization_lower)))];
-        maxs_tmp = [ max(max(real(polarization_upper))), max(max(real(polarization_lower)))];
+        %mins_tmp = [ min(min(real(polarization_upper))), min(min(real(polarization_lower)))];
+        %maxs_tmp = [ max(max(real(polarization_upper))), max(max(real(polarization_lower)))];
         
-        colbarlimits = [min(mins_tmp) ,max(maxs_tmp)];
+        colbarlimits = [-1 ,1];
         
         % define the axis limits
         x_lim = [min(phivec) max(phivec)];
         y_lim = [min(Evec) max(Evec)]/min(abs(Delta));
+        %y_lim = [min(Evec) max(Evec)]/0.1;
         
         
         axes_DOS_upper = axes('Parent',figure1, ...
@@ -688,7 +716,7 @@ end
         levelnum = 50;
         density_of_states2plot = real(polarization_upper(:,indexes));
         db=1;
-        contour(X(1:db:end,1:db:end), Y(1:db:end,1:db:end)/min(abs(Delta)), density_of_states2plot(1:db:end,1:db:end), levelnum ,'LineStyle','none','Fill','on',...   'LevelList',[0.2391 0.2866 0.3342 0.3817 0.4293 0.4769 0.5244 0.572 0.6195 0.6671 0.7147 0.7622 0.8098 0.8573 0.9049 0.9524],...
+        contourf(X(1:db:end,1:db:end), Y(1:db:end,1:db:end)/min(abs(Delta)), density_of_states2plot(1:db:end,1:db:end), levelnum ,'LineStyle','none','Fill','on',...   'LevelList',[0.2391 0.2866 0.3342 0.3817 0.4293 0.4769 0.5244 0.572 0.6195 0.6671 0.7147 0.7622 0.8098 0.8573 0.9049 0.9524],...
            'Parent', axes_DOS_upper);
        
         
@@ -697,9 +725,6 @@ end
         
         % Create ylabel
         ylabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper);
-        
-        
-        
         
         %---------------------------------------------------------------
 
@@ -719,7 +744,7 @@ end
         levelnum = 50;
         density_of_states2plot = real(polarization_lower(:,indexes));
         db=1;
-        contour(X(1:db:end,1:db:end), Y(1:db:end,1:db:end)/min(abs(Delta)), density_of_states2plot(1:db:end,1:db:end), levelnum ,'LineStyle','none','Fill','on',...   'LevelList',[0.2391 0.2866 0.3342 0.3817 0.4293 0.4769 0.5244 0.572 0.6195 0.6671 0.7147 0.7622 0.8098 0.8573 0.9049 0.9524],...
+        contourf(X(1:db:end,1:db:end), Y(1:db:end,1:db:end)/min(abs(Delta)), density_of_states2plot(1:db:end,1:db:end), levelnum ,'LineStyle','none','Fill','on',...   'LevelList',[0.2391 0.2866 0.3342 0.3817 0.4293 0.4769 0.5244 0.572 0.6195 0.6671 0.7147 0.7622 0.8098 0.8573 0.9049 0.9524],...
            'Parent', axes_DOS_lower);
         
         % Create xlabel
@@ -727,6 +752,9 @@ end
         
         % Create ylabel
         ylabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower);
+        
+        cb=colorbar;
+        cb.Position = [ 0.46 0.61 0.04 0.315 ];
         
         % setting figure position
         figure_pos = get( figure1, 'Position' );
@@ -750,7 +778,6 @@ end
         print('-depsc2', [outputdir,'/',outfilename,'_polarization.eps'])
         close(figure1);
         
-        
     end
 % plot the scattering region 
     function ScatterPlot()
@@ -773,7 +800,6 @@ end
         close(figure1);
 
     end
-
 % plot the conductance of the sample
     function ConductancePlot( flux )
 
@@ -823,7 +849,7 @@ end
 
 %% sets the output directory
     function setOutputDir()
-        resultsdir = ['ABS_spectral_H',num2str(height),'_W',num2str(width),'_flux',num2str(flux),'_Cin',num2str(Circ_in),'_Cout',num2str(Circ_out),'_EF',num2str(EF)];
+        resultsdir = ['ABS_spectral_H',num2str(height),'_W',num2str(width),'_flux',num2str(flux),'_Cin',num2str(Circ_in),'_Cout',num2str(Circ_out),'_EF',num2str(EF),'_LOC',location,'_res',num2str(resolution)];
         mkdir(resultsdir );
         outputdir = resultsdir;        
     end
