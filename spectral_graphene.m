@@ -62,10 +62,6 @@ end
     h = 6.626e-34;
     % The charge of the electron
     qe = 1.602e-19;
-    % atomic distance
-    rCC = 1.42*1e-10; %In Angstrom
-    % flux quanta
-    flux0 = h/(2*qe); 
     
     % The outfilename
     outfilename = [fncname, '_',num2str( filenum )];
@@ -214,9 +210,7 @@ end
 %> @return [1] 1D array of the energy points.
 %> @return [2] 1D array of the transverse momentum points.
     function [Evec, phivec] = setVectors()
-        %Delta = 1e-3;
-        %Evec = (0*min(abs(Delta)):max(abs(Delta))/100:1.05*max(abs(Delta)));
-        %Evec = (0*min(abs(Delta)):max(abs(Delta))/resolution:1.05*max(abs(Delta)));
+        
         Delta_E = 0.001;        
         Evec = EF - Delta_E:2*Delta_E/resolution:EF + Delta_E;
         %Evec = (0.4*min(abs(Delta)):max(abs(Delta))/50:0.8*max(abs(Delta)));
@@ -379,8 +373,6 @@ end
     Opt2.magnetic_field = false;
     cTransport_Interface = Transport_Interface(E, Opt2, param );
     
-    %[Opt2, param] = ValidateStructures( Opt2, param );
-    
     cLead = cTransport_Interface.SurfaceGreenFunctionCalculator( lead_idx, 'createCore', createCore, ...
                             'Just_Create_Hamiltonians', Just_Create_Hamiltonians, ...
                             'shiftLead', shiftLead, ...
@@ -390,7 +382,6 @@ end
                             'SurfaceGreensFunction', SurfaceGreensFunction);
 
     % perform gauge transformation
-    %[~, ~, hgauge_field ] = createVectorPotential( -flux(jdx) );
     [~, ~, hgauge_field ] = createVectorPotential( -flux );
 
     % retriving the corrdinates
@@ -427,10 +418,10 @@ end
         % shift the on-site energy - take into account the BdG Ham.
         Hscatter = Hscatter + sparse(1:length(x),1:length(x), ( sites2shift_right & BdG_u )*( EF + mu_N ) - ( sites2shift_right & ~BdG_u )*( EF + mu_N ),length(x),length(x)) ...
                             + sparse(1:length(x),1:length(x), ( sites2shift_left & BdG_u )*( -EF + mu_N ) - ( sites2shift_left & ~BdG_u )*( -EF + mu_N ),length(x),length(x));
+        %no shift
         %Hscatter = Hscatter + sparse(1:length(x),1:length(x), ( sites2shift_right & BdG_u )*( mu_N ) - ( sites2shift_right & ~BdG_u )*( mu_N ),length(x),length(x)) ...
         %                    + sparse(1:length(x),1:length(x), ( sites2shift_left & BdG_u )*(  mu_N ) - ( sites2shift_left & ~BdG_u )*(  mu_N ),length(x),length(x));
                         
-        %% DO WE INCLUDE SHIFT?
         CreateH.Write('Hscatter', Hscatter);
         %%
 %{
@@ -460,7 +451,6 @@ end
 %> @param B The magnetic field
     function CreateHandlesForMagneticField( flux )        
         [hLead, hScatter, gauge_field ] = createVectorPotential( flux );
-        %cRibbon.setHandlesForMagneticField('scatter', hScatter, 'lead', hLead, 'gauge_field', gauge_field );
         cRibbon.setHandlesForMagneticField( 'scatter', hScatter );
     end
 
@@ -475,10 +465,8 @@ end
         % creting the funciton handles of the vector potentials
         hLead = @(x,y)(CircularVectorPotential(x,y, 0, cCircle_in));
         
-        %hScatter = @(x,y)(CircularVectorPotential(x,y, flux, cCircle_in));
         hScatter = @(x,y)(ConstantVectorPotential(x,y, flux , cCircle_in ));
         hgauge_field = @(x,y)(CircularGaugeField(x,y, flux, cCircle_in));
-        %hgauge_field = @(x,y)(ConstantGaugeField(x,y));
 
     end
 
@@ -502,8 +490,6 @@ end
         fontsize = 12;        
         
         % define the colorbar limits
-        %min(min(real(log(density_of_states_upper_electron))))
-        %max(max(real(log(density_of_states_upper_electron))))
         colbarlimits = [min(min(real(log(density_of_states_upper_electron)))) max(max(real(log(density_of_states_upper_electron))))];
         
         % define the axis limits
@@ -796,7 +782,6 @@ end
         daspect([1 1 1]);
 
         print('-dpng', [outputdir,'/scatterplot.png'])
-        %print('-dpng', ['scatterplot.png'])
         close(figure1);
 
     end
