@@ -72,8 +72,8 @@ end
     outputdir   = [];
     
     % The input and output XML files
-    %inputXML = 'Graphene_Input.xml';
-    inputXML = 'Graphene_Input_noDelta.xml';
+    inputXML = 'Graphene_Input.xml';
+    %inputXML = 'Graphene_Input_noDelta.xml';
     outputXML = [outfilename,'.xml'];
     
     % Loading the input parameters
