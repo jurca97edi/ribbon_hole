@@ -230,7 +230,11 @@ end
         % determine the coupling between the interface and the scattering region
         coordinates_interface = Interface_Region.Read('coordinates');
 
-        edge_regions = sparse(coordinates_scatter.y < min(coordinates_scatter.y) + 2 | coordinates_scatter.y > max(coordinates_scatter.y) - 2);
+        %edge_regions = sparse(coordinates_scatter.y < min(coordinates_scatter.y) + 2 | coordinates_scatter.y > max(coordinates_scatter.y) - 2);
+        
+        edge_regions_scatter = sparse(coordinates_scatter.y == min(coordinates_scatter.y) | coordinates_scatter.y == max(coordinates_scatter.y) );
+        edge_regions_interface = sparse(coordinates_interface.y == min(coordinates_interface.y) | coordinates_interface.y == max(coordinates_interface.y) );
+        
 %{
         % now determine the site-pair distances
         distance_x = ( (coordinates_interface.x)*ones( size(coordinates_scatter.x') ) - ...
@@ -240,15 +244,24 @@ end
 
         indexes = (distance_x + distance_y <= 1.01^2);
  %}
-%{a
+%{
         distance_x = ( sparse(coordinates_interface.x)*( edge_regions' ) - ...
                        sparse(ones( size(coordinates_interface.x) ) )*( coordinates_scatter.x.*edge_regions )' ).^2; 
         distance_y = ( sparse(coordinates_interface.y)*( edge_regions' )   - ...
                        sparse(ones( size(coordinates_interface.y) ) )*( coordinates_scatter.y.*edge_regions )' ).^2;
+        % now determine the site pairs that are closer to each other than the 1.1x(atom-atom distance)
+        indexes = (distance_x + distance_y <= 1.01^2) & (distance_x + distance_y > 0);
+%}        
+%{a
+        distance_x = ( sparse(coordinates_interface.x.*edge_regions_interface)*( edge_regions_scatter' ) - ...
+                       edge_regions_interface*( coordinates_scatter.x.*edge_regions_scatter )' ).^2; 
+        distance_y = ( sparse(coordinates_interface.y.*edge_regions_interface)*( edge_regions_scatter' ) - ...
+                       edge_regions_interface*( coordinates_scatter.y.*edge_regions_scatter )' ).^2;
 
         % now determine the site pairs that are closer to each other than the 1.1x(atom-atom distance)
         indexes = (distance_x + distance_y <= 1.01^2) & (distance_x + distance_y > 0);
 %}
+%{
          figure
          plot( coordinates_scatter.x, coordinates_scatter.y, 'bx')
          hold on
@@ -261,7 +274,7 @@ end
                 interface_y = coordinates_interface.y(jdx)*ones(size(scatter_y));
                 plot( [scatter_x'; interface_x'], [scatter_y'; interface_y'], 'k' )
              end
-
+%}
         % first determine the coupling constant 
         params = Interface_Region.Read('params');
         coupling_constant = params.vargamma;       
@@ -269,7 +282,7 @@ end
         % now construct the coupling matrices
         Hcoupling = sparse(coupling_constant*indexes);
 
-        whos
+        %whos
         if ~isempty( coordinates_interface.BdG_u )
             Hcoupling( ~coordinates_interface.BdG_u, ~coordinates_scatter.BdG_u ) = -Hcoupling( ~coordinates_interface.BdG_u, ~coordinates_scatter.BdG_u );
             Hcoupling( ~coordinates_interface.BdG_u, coordinates_scatter.BdG_u ) = 0;

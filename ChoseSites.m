@@ -11,33 +11,34 @@
         
         plot(coords.x,coords.y,'x')
         hold on
-%{      
-%        right_min = min(coords.x(coords.x > mean(coords.x) & center_sites));
-%        right_max = max(coords.x(coords.x > mean(coords.x) & center_sites));
-%        center_right = (right_min + right_max)/2;
-        
-%        left_min = min(coords.x(coords.x < mean(coords.x) & center_sites));
-%        left_max = max(coords.x(coords.x < mean(coords.x) & center_sites));
-%        center_left = (left_min + left_max)/2;
+%{a      
+        right_min = min(coords.x(coords.x > mean(coords.x) & center_sites));
+        right_max = max(coords.x(coords.x > mean(coords.x) & center_sites));
+        center_right = (right_min + right_max)/2;
+       
+        left_min = min(coords.x(coords.x < mean(coords.x) & center_sites));
+        left_max = max(coords.x(coords.x < mean(coords.x) & center_sites));
+        center_left = (left_min + left_max)/2;
 %}        
-        right = max( coords.x );
-        left = min( coords.x );
+
+        sites_per_branch = 60;
         
         %original
         %center_sites = abs(coords.y - mean(coords.y)) < 0.01*ribbon_length;
         
-        center_sites = center_sites & ( abs(coords.x - right) < 60 | abs(coords.x - left) < 60 );
+        %choosing sites in at the outer edge
+        %center_sites = center_sites & ( abs(coords.x - right_max) < sites_per_branch | abs(coords.x - left_min) < sites_per_branch );
         
         % choosing sites in the center
-        %center_sites = center_sites & ( coords.x < center_right & coords.x > center_left );
+        %center_sites = center_sites & ( abs(coords.x - center_right) < sites_per_branch/2 | abs(coords.x - center_left) < sites_per_branch/2 );
         
-        %choosing sites at the edges
-        %center_sites = center_sites & ( coords.x > center_right | coords.x < center_left );
+        %choosing sites in the inner edges
+        center_sites = center_sites & ( abs(coords.x - right_min) < sites_per_branch | abs(coords.x - left_max) < sites_per_branch );
         %sum(center_sites)
 %{a
         plot(coords.x(center_sites),coords.y(center_sites),'x')
         
-        height = ( max(coords.y) - min(coords.y ))/sqrt(3)+0.5;
+        height = ( max(coords.y) - min(coords.y) )/sqrt(3)+0.5;
                 
         print('-dpng', ['ChoseSites_H',num2str(height),'.png'])
         close(figure1);
