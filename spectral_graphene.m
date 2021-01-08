@@ -201,9 +201,9 @@ end
     save( [outputdir,'/',outfilename, '.mat'], 'Evec', 'height', 'EF', 'density_of_states_upper_electron', 'phivec', ...
                 'density_of_states_upper_hole','density_of_states_lower_electron','density_of_states_lower_hole','flux' );
     
-    EgeszAbra(); 
+    EgeszAbra2(); 
     
-    EgeszAbraP(); 
+    %EgeszAbraP(); 
 
 %% SetVectors
 %> @brief Sets the energy and transverse quantum number grid points
@@ -216,7 +216,8 @@ end
         %Evec = (0.4*min(abs(Delta)):max(abs(Delta))/50:0.8*max(abs(Delta)));
         
         phivec_length = pi;
-        phivec = 0:phivec_length/resolution:phivec_length;
+        %phivec = 0:phivec_length/resolution:phivec_length;
+        phivec = [pi/3];
 
     end
 
@@ -656,6 +657,174 @@ end
         
         
     end
+    function EgeszAbra2()
+        
+% ********************** plot the DOS ***********************
+
+        % determine points to be plotted
+        indexes = logical( density_of_states_upper_electron(1,:));
+        
+        if length(phivec(indexes)) < 2
+            return
+        end
+        
+        % creating figure in units of pixels
+        figure1 = figure( 'Units', 'Pixels', 'Visible', 'off');%, 'Colormap', ... % summer, 'pos',[10 10 900 700] );%, ...
+    %[0.0416666679084301 0 0;0.0833333358168602 0 0;0.125 0 0;0.16666667163372 0 0;0.20833332836628 0 0;0.25 0 0;0.291666656732559 0 0;0.333333343267441 0 0;0.375 0 0;0.416666656732559 0 0;0.458333343267441 0 0;0.5 0 0;0.541666686534882 0 0;0.583333313465118 0 0;0.625 0 0;0.666666686534882 0 0;0.708333313465118 0 0;0.75 0 0;0.791666686534882 0 0;0.833333313465118 0 0;0.875 0 0;0.916666686534882 0 0;0.958333313465118 0 0;1 0 0;1 0.0416666679084301 0;1 0.0833333358168602 0;1 0.125 0;1 0.16666667163372 0;1 0.20833332836628 0;1 0.25 0;1 0.291666656732559 0;1 0.333333343267441 0;1 0.375 0;1 0.416666656732559 0;1 0.458333343267441 0;1 0.5 0;1 0.541666686534882 0;1 0.583333313465118 0;1 0.625 0;1 0.666666686534882 0;1 0.708333313465118 0;1 0.75 0;1 0.791666686534882 0;1 0.833333313465118 0;1 0.875 0;1 0.916666686534882 0;1 0.958333313465118 0;1 1 0;1 1 0.0625;1 1 0.125;1 1 0.1875;1 1 0.25;1 1 0.3125;1 1 0.375;1 1 0.4375;1 1 0.5;1 1 0.5625;1 1 0.625;1 1 0.6875;1 1 0.75;1 1 0.8125;1 1 0.875;1 1 0.9375;1 1 1]);
+        
+        % font size on the figure will be 16 points
+        fontsize = 12;        
+        
+        % define the colorbar limits
+        %colbarlimits = [min(min(real(log(density_of_states_upper_electron)))) max(max(real(log(density_of_states_upper_electron))))];
+        
+        % define the axis limits
+        x_lim = [min(phivec) max(phivec)];
+        y_lim = [min(Evec) max(Evec)]/min(abs(Delta));
+        %y_lim = [min(Evec) max(Evec)]/0.1;%the usual value of Delta
+        
+        
+        axes_DOS_upper_electron = axes('Parent',figure1, ...
+                'Visible', 'on',...
+                'FontSize', fontsize,... 
+                'xlim', x_lim,...           
+                'ylim', y_lim,...                      
+                'Box', 'on',...
+                'Units', 'Pixels', ...
+                'FontName','Times New Roman');
+        hold on; 
+        
+        % plot the data
+        density_of_states2plot = real(density_of_states_upper_electron(:,indexes));
+        plot(Evec,density_of_states2plot,'LineSpec','-k','Parent', axes_DOS_upper_electron)
+        
+        % Create xlabel
+        xlabel('\Phi','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_electron);
+        
+        % Create ylabel
+        ylabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_electron);
+        
+        
+        
+        %---------------------------------------------------------------
+
+        axes_DOS_upper_hole = axes('Parent',figure1, ...
+                'Visible', 'on',...
+                'FontSize', fontsize,... 
+                'xlim', x_lim,...           
+                'ylim', y_lim,...      
+                'CLim', colbarlimits, ...
+                'Box', 'on',...
+                'Units', 'Pixels', ...
+                'FontName','Times New Roman');
+        hold on; 
+        
+        % plot the data
+        density_of_states2plot = real(log(density_of_states_upper_hole(:,indexes)));
+        plot(Evec,density_of_states2plot,'LineSpec','-k','Parent', axes_DOS_upper_electron)
+        
+        % Create xlabel
+        xlabel('\Phi','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_hole);
+        
+        % Create ylabel
+        ylabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_hole);
+        
+        
+        
+        %---------------------------------------------------------------
+
+        axes_DOS_lower_electron = axes('Parent',figure1, ...
+                'Visible', 'on',...
+                'FontSize', fontsize,... 
+                'xlim', x_lim,...           
+                'ylim', y_lim,...      
+                'CLim', colbarlimits, ...
+                'Box', 'on',...
+                'Units', 'Pixels', ...
+                'FontName','Times New Roman');
+        hold on; 
+        
+        % plot the data
+        density_of_states2plot = real(log(density_of_states_lower_electron(:,indexes)));
+        plot(Evec,density_of_states2plot,'LineSpec','-k','Parent', axes_DOS_upper_electron)
+        
+        
+        % Create xlabel
+        xlabel('\Phi','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower_electron);
+        
+        % Create ylabel
+        ylabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower_electron);
+        
+        
+        
+        %---------------------------------------------------------------
+
+        axes_DOS_lower_hole = axes('Parent',figure1, ...
+                'Visible', 'on',...
+                'FontSize', fontsize,... 
+                'xlim', x_lim,...           
+                'ylim', y_lim,...      
+                'CLim', colbarlimits, ...
+                'Box', 'on',...
+                'Units', 'Pixels', ...
+                'FontName','Times New Roman');
+        hold on; 
+        
+        % plot the data
+        density_of_states2plot = real(log(density_of_states_lower_hole(:,indexes)));
+        plot(Evec,density_of_states2plot,'LineSpec','-k','Parent', axes_DOS_upper_electron)
+        
+        % Create xlabel
+        xlabel('\Phi','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower_hole);
+        
+        % Create ylabel
+        ylabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower_hole);
+       
+        
+        
+        % setting figure position
+        figure_pos = get( figure1, 'Position' );
+        
+        %set the position of the axes_DOS
+        OuterPosition = get(axes_DOS_upper_electron, 'OuterPosition');
+        OuterPosition(1) = 0;
+        OuterPosition(2) = figure_pos(4)/2;
+        OuterPosition(3) = figure_pos(3)/2;
+        OuterPosition(4) = figure_pos(4)/2;
+        set(axes_DOS_upper_electron, 'OuterPosition', OuterPosition);  
+        
+        %set the position of the axes_pot
+        OuterPosition = get(axes_DOS_upper_hole, 'OuterPosition');
+        OuterPosition(1) = figure_pos(3)/2;
+        OuterPosition(2) = figure_pos(4)/2;
+        OuterPosition(3) = figure_pos(3)/2;
+        OuterPosition(4) = figure_pos(4)/2;
+        set(axes_DOS_upper_hole, 'OuterPosition', OuterPosition);  
+        
+        
+        
+        %set the position of the axes_DOS
+        OuterPosition = get(axes_DOS_lower_electron, 'OuterPosition');
+        OuterPosition(1) = 0;
+        OuterPosition(2) = 0;
+        OuterPosition(3) = figure_pos(3)/2;
+        OuterPosition(4) = figure_pos(4)/2;
+        set(axes_DOS_lower_electron, 'OuterPosition', OuterPosition); 
+        
+        %set the position of the axes_pot
+        OuterPosition = get(axes_DOS_lower_hole, 'OuterPosition');
+        OuterPosition(1) = figure_pos(3)/2;
+        OuterPosition(2) = 0;
+        OuterPosition(3) = figure_pos(3)/2;
+        OuterPosition(4) = figure_pos(4)/2;
+        set(axes_DOS_lower_hole, 'OuterPosition', OuterPosition);      
+
+        
+        print('-dpng', [outputdir,'/',outfilename,'.png'])
+        close(figure1);
+        
+        
+    end
     function EgeszAbraP()
 
 % ********************** plot the DOS ***********************
@@ -761,7 +930,7 @@ end
         OuterPosition(4) = figure_pos(4)/2;
         set(axes_DOS_lower, 'OuterPosition', OuterPosition);  
         
-        print('-depsc2', [outputdir,'/',outfilename,'_polarization.eps'])
+        print('-dpng', [outputdir,'/',outfilename,'_polarization.png'])
         close(figure1);
         
     end
