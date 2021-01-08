@@ -664,20 +664,16 @@ end
         % determine points to be plotted
         indexes = logical( density_of_states_upper_electron(1,:));
         
-        if length(phivec(indexes)) < 2
-            return
-        end
-        
         % creating figure in units of pixels
-        figure1 = figure( 'Units', 'Pixels', 'Visible', 'off');%, 'Colormap', ... % summer, 'pos',[10 10 900 700] );%, ...
+        figure1 = figure( 'Units', 'Pixels', 'Visible', 'on');%, 'Colormap', ... % summer, 'pos',[10 10 900 700] );%, ...
     %[0.0416666679084301 0 0;0.0833333358168602 0 0;0.125 0 0;0.16666667163372 0 0;0.20833332836628 0 0;0.25 0 0;0.291666656732559 0 0;0.333333343267441 0 0;0.375 0 0;0.416666656732559 0 0;0.458333343267441 0 0;0.5 0 0;0.541666686534882 0 0;0.583333313465118 0 0;0.625 0 0;0.666666686534882 0 0;0.708333313465118 0 0;0.75 0 0;0.791666686534882 0 0;0.833333313465118 0 0;0.875 0 0;0.916666686534882 0 0;0.958333313465118 0 0;1 0 0;1 0.0416666679084301 0;1 0.0833333358168602 0;1 0.125 0;1 0.16666667163372 0;1 0.20833332836628 0;1 0.25 0;1 0.291666656732559 0;1 0.333333343267441 0;1 0.375 0;1 0.416666656732559 0;1 0.458333343267441 0;1 0.5 0;1 0.541666686534882 0;1 0.583333313465118 0;1 0.625 0;1 0.666666686534882 0;1 0.708333313465118 0;1 0.75 0;1 0.791666686534882 0;1 0.833333313465118 0;1 0.875 0;1 0.916666686534882 0;1 0.958333313465118 0;1 1 0;1 1 0.0625;1 1 0.125;1 1 0.1875;1 1 0.25;1 1 0.3125;1 1 0.375;1 1 0.4375;1 1 0.5;1 1 0.5625;1 1 0.625;1 1 0.6875;1 1 0.75;1 1 0.8125;1 1 0.875;1 1 0.9375;1 1 1]);
         
         % font size on the figure will be 16 points
         fontsize = 12;        
          
         % define the axis limits        
-        x_lim = [min(Evec) max(Evec)]/min(abs(Delta));
-        y_lim = [min(min(real(density_of_states_upper_electron(:,indexes)))) max(max(real(density_of_states_upper_electron(:,indexes))))];
+        x_lim = [min(Evec) max(Evec)];%/min(abs(Delta));
+        y_lim = [0 max([max(real(density_of_states_upper_electron(:,indexes))),max(real(density_of_states_upper_hole(:,indexes))),max(real(density_of_states_lower_electron(:,indexes))),max(real(density_of_states_lower_hole(:,indexes)))])];
         %x_lim = [min(Evec) max(Evec)]/0.1;%the usual value of Delta
         
         
@@ -693,7 +689,7 @@ end
         
         % plot the data
         density_of_states2plot = real(density_of_states_upper_electron(:,indexes));
-        plot(Evec,density_of_states2plot,'LineSpec','-k','Parent', axes_DOS_upper_electron)
+        plot(Evec,density_of_states2plot,'LineStyle','-','Color','k','Parent', axes_DOS_upper_electron)
         
         % Create xlabel
         xlabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_electron);
@@ -710,21 +706,20 @@ end
                 'FontSize', fontsize,... 
                 'xlim', x_lim,...           
                 'ylim', y_lim,...      
-                'CLim', colbarlimits, ...
                 'Box', 'on',...
                 'Units', 'Pixels', ...
                 'FontName','Times New Roman');
         hold on; 
         
         % plot the data
-        density_of_states2plot = real(log(density_of_states_upper_hole(:,indexes)));
-        plot(Evec,density_of_states2plot,'LineSpec','-k','Parent', axes_DOS_upper_electron)
+        density_of_states2plot = real(density_of_states_upper_hole(:,indexes));
+        plot(Evec,density_of_states2plot,'LineStyle','-','Color','k','Parent', axes_DOS_upper_hole)
         
         % Create xlabel
-        xlabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_electron);
+        xlabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_hole);
         
         % Create ylabel
-        ylabel('DOS','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_electron);
+        ylabel('DOS','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_hole);
         
         
         
@@ -735,22 +730,21 @@ end
                 'FontSize', fontsize,... 
                 'xlim', x_lim,...           
                 'ylim', y_lim,...      
-                'CLim', colbarlimits, ...
                 'Box', 'on',...
                 'Units', 'Pixels', ...
                 'FontName','Times New Roman');
         hold on; 
         
         % plot the data
-        density_of_states2plot = real(log(density_of_states_lower_electron(:,indexes)));
-        plot(Evec,density_of_states2plot,'LineSpec','-k','Parent', axes_DOS_upper_electron)
+        density_of_states2plot = real(density_of_states_lower_electron(:,indexes));
+        plot(Evec,density_of_states2plot,'LineStyle','-','Color','k','Parent', axes_DOS_lower_electron)
         
         
         % Create xlabel
-        xlabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_electron);
+        xlabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower_electron);
         
         % Create ylabel
-        ylabel('DOS','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_electron);
+        ylabel('DOS','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower_electron);
         
         
         
@@ -761,21 +755,20 @@ end
                 'FontSize', fontsize,... 
                 'xlim', x_lim,...           
                 'ylim', y_lim,...      
-                'CLim', colbarlimits, ...
                 'Box', 'on',...
                 'Units', 'Pixels', ...
                 'FontName','Times New Roman');
         hold on; 
         
         % plot the data
-        density_of_states2plot = real(log(density_of_states_lower_hole(:,indexes)));
-        plot(Evec,density_of_states2plot,'LineSpec','-k','Parent', axes_DOS_upper_electron)
+        density_of_states2plot = real(density_of_states_lower_hole(:,indexes));
+        plot(Evec,density_of_states2plot,'LineStyle','-','Color','k','Parent', axes_DOS_lower_hole)
         
         % Create xlabel
-        xlabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_electron);
+        xlabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower_hole);
         
         % Create ylabel
-        ylabel('DOS','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_electron);
+        ylabel('DOS','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower_hole);
         
         
         
