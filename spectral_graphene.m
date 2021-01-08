@@ -133,13 +133,11 @@ end
     % creating function handle for the Hamiltonians
     Opt.BdG = false;
 
-    hLeadModel = @LeadModel;
-
     cRibbon=[];
 
     % creating the NTerminal class
     cRibbon = Ribbon_hole('width', width, 'height', height, 'Opt', Opt, 'param', param, 'filenameOut', fullfile( outputdir, [outfilename, '.xml']), ...
-                       'leadmodel', hLeadModel, 'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width); 
+                       'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width); 
     %{
     Flux=[0; pi/2; pi; pi*3/2; 2*pi];
 
@@ -245,11 +243,8 @@ end
             
             % creating the NTerminal class
             cRibbon = Ribbon_hole('width', width, 'height', height, 'Opt', Opt, 'param', param, 'filenameOut', fullfile( outputdir, [outfilename, '.xml']), ...
-                     'leadmodel', hLeadModel, 'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width); 
-               
-            % creating funcfion handles for the magnetic vector potentials
-            CreateHandlesForMagneticField( flux )
-
+                     'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width); 
+                 
             % functio handle to pick the central sites in the scattering region
             switch(location)
                 case 'outer'
@@ -651,7 +646,7 @@ end
         set(axes_DOS_lower_hole, 'OuterPosition', OuterPosition);      
 
         
-        print('-depsc2', [outputdir,'/',outfilename,'.eps'])
+        print('-dpng', [outputdir,'/',outfilename,'.png'])
         close(figure1);
         
         
@@ -761,7 +756,7 @@ end
         OuterPosition(4) = figure_pos(4)/2;
         set(axes_DOS_lower, 'OuterPosition', OuterPosition);  
         
-        print('-depsc2', [outputdir,'/',outfilename,'_polarization.eps'])
+        print('-dpng', [outputdir,'/',outfilename,'_polarization.png'])
         close(figure1);
         
     end
