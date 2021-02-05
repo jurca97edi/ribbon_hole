@@ -49,19 +49,8 @@ end
     EF=str2num(EF);
     resolution=str2num(resolution);
     
-    % The Fermi level in the scattering region
-    %EF = 0.11;%2;%-PotentialStrength in eV
     % imaginary part of the Fermi energy
-    eta = 1e-8;
-
-	% the chosen transverse momentum
-	%q = 5e-3;
-    
-    
-    % Planck contant
-    h = 6.626e-34;
-    % The charge of the electron
-    qe = 1.602e-19;
+    eta = 1e-5;
     
     % The outfilename
     outfilename = [fncname, '_',num2str( filenum )];
@@ -69,7 +58,6 @@ end
     
     % The input and output XML files
     inputXML = 'Graphene_Input.xml';
-    %inputXML = 'Graphene_Input_noDelta.xml';
     outputXML = [outfilename,'.xml'];
     
     % Loading the input parameters
@@ -140,25 +128,6 @@ end
     % creating the NTerminal class
     cRibbon = Ribbon_hole('width', width, 'height', height, 'Opt', Opt, 'param', param, 'filenameOut', fullfile( outputdir, [outfilename, '.xml']), ...
                        'leadmodel', hLeadModel, 'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width); 
-    %{
-    Flux=[0; pi/2; pi; pi*3/2; 2*pi];
-
-    Conductance = zeros(length(Evec),1);
-               
-    for jdx=1:length(Flux)
-
-        % create handle for the piercing magnetic flux
-        flux=Flux(jdx);
-        CreateHandlesForMagneticField( flux );
-        parfor kdx=1:length(Evec)
-            Conductance(kdx) = cRibbon.Transport(Evec(kdx), 'gfininvfromHamiltonian', true);
-        end
-        disp([ num2str(jdx/length(Flux)*100),' % calculated of the conductance.'])
-        
-        ConductancePlot(flux);
-
-    end
-    %}
                        
     %{
     cRibbon.Transport(1e-2, 'gfininvfromHamiltonian', true);                       
@@ -180,7 +149,7 @@ end
     %return            
     
     % calculate the spectra of a slice with the give paramteres
-    %Spectra();return
+    %Spectra(); return
     
     Opt.BdG = true;
     
@@ -200,9 +169,7 @@ end
     
     save( [outputdir,'/',outfilename, '.mat'], 'Evec', 'height', 'EF', 'density_of_states_upper_electron', 'phivec', ...
                 'density_of_states_upper_hole','density_of_states_lower_electron','density_of_states_lower_hole','flux' );
-    
-    EgeszAbra2(); 
-    
+
     %EgeszAbraP(); 
 
 %% SetVectors
@@ -211,7 +178,8 @@ end
 %> @return [2] 1D array of the transverse momentum points.
     function [Evec, phivec] = setVectors()
         
-        Delta_E = 0.001;        
+        %Delta_E = 0.001;
+        Delta_E = Delta/100;
         Evec = EF - Delta_E:2*Delta_E/resolution:EF + Delta_E;
         %Evec = (0.4*min(abs(Delta)):max(abs(Delta))/50:0.8*max(abs(Delta)));
         
@@ -321,8 +289,8 @@ end
             polarization_lower(:,idx) = ( Rho_lower_electron - Rho_lower_hole )./ denominator ;
             
             % calculated data are plotted at each step
-            EgeszAbra()
-            EgeszAbraP()
+            %EgeszAbra()
+            EgeszAbra2();
             
             % exporting the calculated data
             save( [outputdir,'/',outfilename, '.mat'], 'Evec', 'height', 'EF', 'density_of_states_upper_electron', 'phivec', ...
@@ -424,7 +392,7 @@ end
         %                    + sparse(1:length(x),1:length(x), ( sites2shift_left & BdG_u )*(  mu_N ) - ( sites2shift_left & ~BdG_u )*(  mu_N ),length(x),length(x));
                         
         CreateH.Write('Hscatter', Hscatter);
-        %%
+
 %{
         figure1 = figure('rend','painters','pos',[10 10 900 400]);
   
@@ -489,7 +457,7 @@ end
         
         % font size on the figure will be 16 points
         fontsize = 12;        
-        
+
         % define the colorbar limits
         colbarlimits = [min(min(real(log(density_of_states_upper_electron)))) max(max(real(log(density_of_states_upper_electron))))];
         
@@ -665,19 +633,22 @@ end
         indexes = logical( density_of_states_upper_electron(1,:));
         
         % creating figure in units of pixels
-        figure1 = figure( 'Units', 'Pixels', 'Visible', 'on');%, 'Colormap', ... % summer, 'pos',[10 10 900 700] );%, ...
+        figure1 = figure( 'Units', 'Pixels', 'Visible', 'on','pos',[0 0 900 400]);%, 'Colormap', ... % summer, 'pos',[10 10 900 700] );%, ...
     %[0.0416666679084301 0 0;0.0833333358168602 0 0;0.125 0 0;0.16666667163372 0 0;0.20833332836628 0 0;0.25 0 0;0.291666656732559 0 0;0.333333343267441 0 0;0.375 0 0;0.416666656732559 0 0;0.458333343267441 0 0;0.5 0 0;0.541666686534882 0 0;0.583333313465118 0 0;0.625 0 0;0.666666686534882 0 0;0.708333313465118 0 0;0.75 0 0;0.791666686534882 0 0;0.833333313465118 0 0;0.875 0 0;0.916666686534882 0 0;0.958333313465118 0 0;1 0 0;1 0.0416666679084301 0;1 0.0833333358168602 0;1 0.125 0;1 0.16666667163372 0;1 0.20833332836628 0;1 0.25 0;1 0.291666656732559 0;1 0.333333343267441 0;1 0.375 0;1 0.416666656732559 0;1 0.458333343267441 0;1 0.5 0;1 0.541666686534882 0;1 0.583333313465118 0;1 0.625 0;1 0.666666686534882 0;1 0.708333313465118 0;1 0.75 0;1 0.791666686534882 0;1 0.833333313465118 0;1 0.875 0;1 0.916666686534882 0;1 0.958333313465118 0;1 1 0;1 1 0.0625;1 1 0.125;1 1 0.1875;1 1 0.25;1 1 0.3125;1 1 0.375;1 1 0.4375;1 1 0.5;1 1 0.5625;1 1 0.625;1 1 0.6875;1 1 0.75;1 1 0.8125;1 1 0.875;1 1 0.9375;1 1 1]);
         
         % font size on the figure will be 16 points
-        fontsize = 12;        
-         
+        fontsize = 12;
+
+        DOS_sum_upper  = real(density_of_states_upper_electron(:,indexes)) + real(density_of_states_upper_hole(:,indexes));
+        DOS_diff_upper = real(density_of_states_upper_electron(:,indexes)) - real(density_of_states_upper_hole(:,indexes));
+        DOS_sum_lower  = real(density_of_states_lower_electron(:,indexes)) + real(density_of_states_lower_hole(:,indexes));
+        DOS_diff_lower = real(density_of_states_lower_electron(:,indexes)) - real(density_of_states_lower_hole(:,indexes));
         % define the axis limits        
+        
         x_lim = [min(Evec) max(Evec)];%/min(abs(Delta));
-        y_lim = [0 max([max(real(density_of_states_upper_electron(:,indexes))),max(real(density_of_states_upper_hole(:,indexes))),max(real(density_of_states_lower_electron(:,indexes))),max(real(density_of_states_lower_hole(:,indexes)))])];
-        %x_lim = [min(Evec) max(Evec)]/0.1;%the usual value of Delta
+        y_lim = [min([min(DOS_diff_upper),min(DOS_diff_lower)]) 1.05*max([max(DOS_sum_upper),max(DOS_sum_lower)])];
         
-        
-        axes_DOS_upper_electron = axes('Parent',figure1, ...
+        axes_DOS_upper = axes('Parent',figure1, ...
                 'Visible', 'on',...
                 'FontSize', fontsize,... 
                 'xlim', x_lim,...           
@@ -688,20 +659,20 @@ end
         hold on; 
         
         % plot the data
-        density_of_states2plot = real(density_of_states_upper_electron(:,indexes));
-        plot(Evec,density_of_states2plot,'LineStyle','-','Color','k','Parent', axes_DOS_upper_electron)
+        plot(Evec,DOS_sum_upper,'LineStyle','-','Color','red','Parent', axes_DOS_upper)
+        plot(Evec,DOS_diff_upper,'LineStyle','-','Color','blue','Parent', axes_DOS_upper)
         
         % Create xlabel
-        xlabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_electron);
+        xlabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper);
         
         % Create ylabel
-        ylabel('DOS','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_electron);
+        ylabel('Left side','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper);
         
-        
+        legend({'$\rho_{e}+\rho_{h}$','$\rho_{e}-\rho_{h}$'},'Interpreter','Latex','FontSize',fontsize,'Location','best');
         
         %---------------------------------------------------------------
 
-        axes_DOS_upper_hole = axes('Parent',figure1, ...
+        axes_DOS_lower = axes('Parent',figure1, ...
                 'Visible', 'on',...
                 'FontSize', fontsize,... 
                 'xlim', x_lim,...           
@@ -712,19 +683,19 @@ end
         hold on; 
         
         % plot the data
-        density_of_states2plot = real(density_of_states_upper_hole(:,indexes));
-        plot(Evec,density_of_states2plot,'LineStyle','-','Color','k','Parent', axes_DOS_upper_hole)
+        plot(Evec,DOS_sum_lower,'LineStyle','-','Color','red','Parent', axes_DOS_lower)
+        plot(Evec,DOS_diff_lower,'LineStyle','-','Color','blue','Parent', axes_DOS_lower)
         
         % Create xlabel
-        xlabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_hole);
+        xlabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower);
         
         % Create ylabel
-        ylabel('DOS','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_hole);
+        ylabel('Right side','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower);
         
-        
-        
-        %---------------------------------------------------------------
+        legend({'$\rho_{e}+\rho_{h}$','$\rho_{e}-\rho_{h}$'},'Interpreter','Latex','FontSize',fontsize,'Location','best');
 
+        %---------------------------------------------------------------
+%{
         axes_DOS_lower_electron = axes('Parent',figure1, ...
                 'Visible', 'on',...
                 'FontSize', fontsize,... 
@@ -769,30 +740,30 @@ end
         
         % Create ylabel
         ylabel('DOS','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower_hole);
-        
+%}
         
         
         % setting figure position
         figure_pos = get( figure1, 'Position' );
         
         %set the position of the axes_DOS
-        OuterPosition = get(axes_DOS_upper_electron, 'OuterPosition');
+        OuterPosition = get(axes_DOS_upper, 'OuterPosition');
         OuterPosition(1) = 0;
-        OuterPosition(2) = figure_pos(4)/2;
+        OuterPosition(2) = 0;
         OuterPosition(3) = figure_pos(3)/2;
-        OuterPosition(4) = figure_pos(4)/2;
-        set(axes_DOS_upper_electron, 'OuterPosition', OuterPosition);  
+        OuterPosition(4) = figure_pos(4);
+        set(axes_DOS_upper, 'OuterPosition', OuterPosition);
         
         %set the position of the axes_pot
-        OuterPosition = get(axes_DOS_upper_hole, 'OuterPosition');
+        OuterPosition = get(axes_DOS_lower, 'OuterPosition');
         OuterPosition(1) = figure_pos(3)/2;
-        OuterPosition(2) = figure_pos(4)/2;
+        OuterPosition(2) = 0;
         OuterPosition(3) = figure_pos(3)/2;
-        OuterPosition(4) = figure_pos(4)/2;
-        set(axes_DOS_upper_hole, 'OuterPosition', OuterPosition);  
+        OuterPosition(4) = figure_pos(4);
+        set(axes_DOS_lower, 'OuterPosition', OuterPosition);
         
         
-        
+%{
         %set the position of the axes_DOS
         OuterPosition = get(axes_DOS_lower_electron, 'OuterPosition');
         OuterPosition(1) = 0;
@@ -808,7 +779,7 @@ end
         OuterPosition(3) = figure_pos(3)/2;
         OuterPosition(4) = figure_pos(4)/2;
         set(axes_DOS_lower_hole, 'OuterPosition', OuterPosition);      
-
+%}
         
         print('-dpng', [outputdir,'/',outfilename,'.png'])
         close(figure1);
@@ -927,7 +898,7 @@ end
 % plot the scattering region 
     function ScatterPlot()
 
-        figure1 = figure( 'Units', 'Pixels', 'Visible', 'on' );
+        figure1 = figure( 'Units', 'Pixels', 'Visible', 'on');
 
         cRibbon.Transport(1e-2, 'gfininvfromHamiltonian', true);
     
@@ -961,16 +932,19 @@ end
 % calculate a basic spectra with the given parameters
     function Spectra( )
 
+        figure1 = figure( 'Units', 'Pixels', 'Visible', 'on' ,'pos',[ 0 0 500 300]);
+
         HLead=CreateLeadHamiltonians(Opt, param, 'Hanyadik_Lead', 1, 'q',0);
         HLead.CreateHamiltonians();
 
+        ka_vec=2*pi/3-0.1:0.2/300:2*pi/3+0.1;
         k_points=300;
         db=20;
         k_lim=int16(db*(k_points+1)/2);
 
-        [SpectrumData2]=HLead.CalcSpektrum('ka_num',k_points,'db',db,'offset',0,'calcWaveFnc',false);
+        [SpectrumData2]=HLead.CalcSpektrum('ka_vec',ka_vec,'db',db,'offset',-dope,'calcWaveFnc',false);
 
-        plot(SpectrumData2(1:k_lim*2),SpectrumData2(k_lim*2+1:k_lim*4),'+','MarkerSize', 10);%, 'color', [1 0 0]);  
+        plot(SpectrumData2(1:k_lim*2),SpectrumData2(k_lim*2+1:k_lim*4),'.','MarkerSize', 7);%, 'color', [1 0 0]);
         %ylim([-2 2]);
 
         Opt.BdG = true; 
@@ -981,14 +955,26 @@ end
 
         HLead=CreateLeadHamiltonians(Opt, param, 'Hanyadik_Lead', 1, 'q',0);
         HLead.CreateHamiltonians();
+        %db=30;
 
-        [SpectrumData2]=HLead.CalcSpektrum('ka_num',k_points,'db',db,'offset',0,'calcWaveFnc',false);
+        [SpectrumData2]=HLead.CalcSpektrum('ka_vec',ka_vec,'db',db,'offset',-dope,'calcWaveFnc',false);
 
-        plot(SpectrumData2(1:k_lim*2),SpectrumData2(k_lim*2+1:k_lim*4),'x','MarkerSize', 5);%, 'color', [1 0 0]);  
+        plot(SpectrumData2(1:k_lim*2),SpectrumData2(k_lim*2+1:k_lim*4),'.','MarkerSize', 7);%, 'color', [1 0 0]);
 
-        ylim([-2*dope 2*dope]);
-        legend('Normal - w/ dope','Supra - w/ dope');
- 
+        %xlim([2 2.188]);
+        xlim([1.944 2.244]);
+        %xticks([2,2.094,2.188]);
+        xticks([1.944,2.094,2.244]);
+        %xticklabels(["7\pi/12","2\pi/3","9\pi/12"]);
+        %ylim([-1*dope-1 -1*dope+1]);
+        ylim([-0.2 0.2]);
+        yticks([-0.2,-0.1,0,0.1,0.2]);
+        yticklabels(["-2\Delta","-\Delta","0","\Delta","2\Delta"]);
+        xlabel('$k$','Interpreter','latex');
+        ylabel('$E\,[\Delta]$','Interpreter','latex');
+        legend('Normal graphene','Superconducting graphene');
+        print('-dpng', [outputdir,'/spectra_ribbon','.png'])
+        close(figure1);
     end
 
 %% sets the output directory
