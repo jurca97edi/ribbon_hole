@@ -112,13 +112,13 @@ end
            	obj.display(['EQuUs:Utils:',class(obj),':CreateScatter: Applying magnetic field in the unit cell of the scattering region']);
            	obj.PeierlsTransform_Scatter.PeierlsTransformLeads( Scatter_UC );
         end
+
+        
+        % pin the hole and remove sites beyond the outher boundary
         
         % Create the Hamiltonian of the scattering region
         CreateH = CreateHamiltonians(obj.Opt, obj.param, 'q', obj.q);
         CreateH.CreateScatterH( 'Scatter_UC', Scatter_UC );    
-        
-        
-        % pin the hole and remove sites beyond the outher boundary
         
         % obtaining coordinates
         coordinates_scatter = CreateH.Read('coordinates');
@@ -130,10 +130,18 @@ end
         indexes_out =  abs(coordinates_scatter.x - obj.cCircle_out.center.x) >= obj.width/2 & ...
             (coordinates_scatter.x - obj.cCircle_out.center.x).^2 + (coordinates_scatter.y - obj.cCircle_out.center.y).^2 > obj.cCircle_out.radius^2;
         
-                
         %removing the sites of the inner hole
         CreateH.RemoveSites( indexes_hole | indexes_out );
         
+        % obtaining the modified coordinates
+        coordinates_scatter = CreateH.Read('coordinates');
+
+        % the weakly doped regions are 20 l.c. away from the center
+        weakly_doped_max_y = max( coordinates_scatter.y( abs(coordinates_scatter.y - obj.cCircle_in.center.y) < 20 ) );
+        weakly_doped_right_edge = coordinates_scatter.x > max( coordinates_scatter.x( coordinates_scatter.y == weakly_doped_max_y ) );
+        weakly_doped_left_edge = coordinates_scatter.x < min( coordinates_scatter.x( coordinates_scatter.y == weakly_doped_max_y ) );
+
+        CreateH.RemoveSites( weakly_doped_right_edge | weakly_doped_left_edge );
         
         % obtaining the modified coordinates
         coordinates_scatter = CreateH.Read('coordinates');
@@ -171,8 +179,10 @@ end
         % Determine the sites that are coupled to the leads
         y_min = min( coordinates_scatter.y );
         y_max = max( coordinates_scatter.y );
+        x_min = min( coordinates_scatter.x );
+        x_max = max( coordinates_scatter.x );
         
-        non_singular_sites_logical = abs(y_min - coordinates_scatter.y ) < 1e-6 | abs(y_max - coordinates_scatter.y ) < 1e-6;
+        non_singular_sites_logical = abs(y_min - coordinates_scatter.y ) < 1e-6 | abs(y_max - coordinates_scatter.y ) < 1e-6 | abs(x_min - coordinates_scatter.x ) < 1e-6 | abs(x_max - coordinates_scatter.x ) < 1e-6;
         
 %         figure
 %         plot3( coordinates_scatter.x, coordinates_scatter.y, coordinates_scatter.z, 'bx')
@@ -224,7 +234,11 @@ end
         Interface_Region.Write( 'kulso_szabfokok', Lead.Read('kulso_szabfokok'));
         Interface_Region.Write( 'OverlapApplied', true);
 
-        coordinates_shift = [1, -1 ]; %relative to the leads
+        if length(Leads) == 2
+            coordinates_shift = [1, -1 ]; %relative to the leads
+        else
+            coordinates_shift = [1, 1, 1, -1 ]; %relative to the leads %% itt jelenik meg a +2 lead
+        end
         Interface_Region.ShiftCoordinates( coordinates_shift(idx) );
 
         % determine the coupling between the interface and the scattering region
@@ -232,33 +246,16 @@ end
 
         %edge_regions = sparse(coordinates_scatter.y < min(coordinates_scatter.y) + 2 | coordinates_scatter.y > max(coordinates_scatter.y) - 2);
         
-        edge_regions_scatter = sparse(coordinates_scatter.y == min(coordinates_scatter.y) | coordinates_scatter.y == max(coordinates_scatter.y) );
-        edge_regions_interface = sparse(coordinates_interface.y == min(coordinates_interface.y) | coordinates_interface.y == max(coordinates_interface.y) );
+        %% ADD THE REGIONS OF N_n AND N_p
+        edge_regions_scatter = sparse(coordinates_scatter.y == min(coordinates_scatter.y) | coordinates_scatter.y == max(coordinates_scatter.y) ) | sparse(coordinates_scatter.x == min(coordinates_scatter.x) | coordinates_scatter.x == max(coordinates_scatter.x) );
+        edge_regions_interface = sparse(coordinates_interface.y == min(coordinates_interface.y) | coordinates_interface.y == max(coordinates_interface.y) ) | sparse(coordinates_interface.x == min(coordinates_interface.x) | coordinates_interface.x == max(coordinates_interface.x) );
         
-%{
-        % now determine the site-pair distances
-        distance_x = ( (coordinates_interface.x)*ones( size(coordinates_scatter.x') ) - ...
-                       ones( size(coordinates_interface.x) )*(coordinates_scatter.x') ).^2;
-        distance_y = ( (coordinates_interface.y)*ones( size(coordinates_scatter.y') ) - ...
-                       ones( size(coordinates_interface.y) )*(coordinates_scatter.y') ).^2;
-
-        indexes = (distance_x + distance_y <= 1.01^2);
- %}
-%{
-        distance_x = ( sparse(coordinates_interface.x)*( edge_regions' ) - ...
-                       sparse(ones( size(coordinates_interface.x) ) )*( coordinates_scatter.x.*edge_regions )' ).^2; 
-        distance_y = ( sparse(coordinates_interface.y)*( edge_regions' )   - ...
-                       sparse(ones( size(coordinates_interface.y) ) )*( coordinates_scatter.y.*edge_regions )' ).^2;
-        % now determine the site pairs that are closer to each other than the 1.1x(atom-atom distance)
-        indexes = (distance_x + distance_y <= 1.01^2) & (distance_x + distance_y > 0);
-%}        
-%{a
         distance_x = ( sparse(coordinates_interface.x.*edge_regions_interface)*( edge_regions_scatter' ) - ...
                        edge_regions_interface*( coordinates_scatter.x.*edge_regions_scatter )' ).^2; 
         distance_y = ( sparse(coordinates_interface.y.*edge_regions_interface)*( edge_regions_scatter' ) - ...
                        edge_regions_interface*( coordinates_scatter.y.*edge_regions_scatter )' ).^2;
 
-        % now determine the site pairs that are closer to each other than the 1.1x(atom-atom distance)
+        % now determine the site pairs that are closer to each other than the 1.01x(atom-atom distance)
         indexes = (distance_x + distance_y <= 1.01^2) & (distance_x + distance_y > 0);
 %}
 %{
@@ -281,8 +278,6 @@ end
 
         % now construct the coupling matrices
         Hcoupling = sparse(coupling_constant*indexes);
-
-        %whos
         if ~isempty( coordinates_interface.BdG_u )
             Hcoupling( ~coordinates_interface.BdG_u, ~coordinates_scatter.BdG_u ) = -Hcoupling( ~coordinates_interface.BdG_u, ~coordinates_scatter.BdG_u );
             Hcoupling( ~coordinates_interface.BdG_u, coordinates_scatter.BdG_u ) = 0;
@@ -331,6 +326,8 @@ end
         end
         
         Interface_Region.Calc_Effective_Hamiltonians( 0, 'Lead', Lead );
+
+
     end
 
 
