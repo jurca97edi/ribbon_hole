@@ -11,7 +11,6 @@
         <workers value="10" description="Number of parallel matlab workers" />
         <debug value="0" description="Set to 1 in order to export debug informations." />		
         <magnetic_field value="1" description="Type 0 not to use magnetic field, or 1 to use magnetic field" />		
-        <magnetic_field_trans_invariant value="0" description="Type 0 not to use magnetic field, or 1 to use magnetic field"/>
         <Linear_Regression_in_B value="1" description="set to 1 if use linear regression to calculate peierls integrals between sites. Useful when dealing with homogenious magnetic field." />	
     </computing_parameters>
     
@@ -26,7 +25,7 @@
 		<NofLeads value="2" description="Number of leads"/> 
         
 		<lead num="1">
-			<pair_potential abs="0.1" phase="0" description="Superconducting pair potential, with abs standing for the absolute value and phase for the complex phase" />
+			<pair_potential abs="0.01" phase="0" description="Superconducting pair potential, with abs standing for the absolute value and phase for the complex phase" />
 			<epsilon value="0" description="On-site energy in the scattering region"/> 
 			<vargamma value="2.97" description="Hopping parameter in the lead" />
 			<orientation value="1" description="Orientation of the lead" /> 
@@ -34,7 +33,7 @@
 		</lead>
 
 		<lead num="2">
-			<pair_potential abs="0.1" phase="0" description="Superconducting pair potential, with abs standing for the absolute value and phase for the complex phase" />
+			<pair_potential abs="0.01" phase="0" description="Superconducting pair potential, with abs standing for the absolute value and phase for the complex phase" />
 			<epsilon value="0" description="On-site energy in the scattering region"/> 
 			<vargamma value="2.97" description="Hopping parameter in the lead" />
 			<orientation value="-1" description="Orientation of the lead" /> 
