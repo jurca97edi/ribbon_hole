@@ -368,9 +368,6 @@ end
         sites2shift_left  = x  < cCircle_in.center.x & abs( y - cCircle_in.center.y ) < 20;
         sites2shift_right = x >= cCircle_in.center.x & abs( y - cCircle_in.center.y ) < 20;
 
-%        sites2shift_left  = x  < cCircle_in.center.x & abs( y - cCircle_in.center.y ) < 20 & x > - floor(( width*2 - lead_width )/2*1.5/3)*3 - 0.5 - 1e-6; 
-%        sites2shift_right = x >= cCircle_in.center.x & abs( y - cCircle_in.center.y ) < 20 & x < - floor(( width*2 - lead_width )/2*1.5/3)*3 + width*2*1.5 - 0.5; % 1 unit dist. is 0.142 nm
-        
         % shift up the on-site energy on the right side and down on the
         % left side with EF
         fact = -(-1).^coordinates.BdG_u;
@@ -965,7 +962,6 @@ end
         print('-dpng', [outputdir,'/spectra_ribbon','.png'])
         close(figure1);
     end
-
 %% sets the output directory
     function setOutputDir()
         resultsdir = ['ABS_spectral2_H',num2str(height),'_W',num2str(width),'_flux',num2str(flux),'_Cin',num2str(Circ_in),'_Cout',num2str(Circ_out),'_EF',num2str(EF),'_LOC',location,'_res',num2str(resolution)];

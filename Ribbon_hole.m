@@ -115,7 +115,6 @@ end
            	obj.PeierlsTransform_Scatter.PeierlsTransformLeads( Scatter_UC );
         end
 
-        
         % pin the hole and remove sites beyond the outher boundary
         
         % Create the Hamiltonian of the scattering region
@@ -126,22 +125,7 @@ end
         coordinates_scatter = CreateH.Read('coordinates');
 %        plot( coordinates_scatter.x, coordinates_scatter.y, 'bx')
 %        hold on
-%{
-        %% determine position of leads
 
-        % determine sites not be removed (only for DOS)     
-        x0_l = - floor(( obj.width*2 - obj.lead_width )/2*1.5/3)*3 - 3               - 0.5 - 1e-6;
-        x0_r = - floor(( obj.width*2 - obj.lead_width )/2*1.5/3)*3 + obj.width*2*1.5 - 0.5 - 1e-6 ;
-        y0 = round( ( obj.cCircle_out.center.y - 20)/sqrt(3) )*sqrt(3) - 1e-6;
-      
-        keep_left_lead  = coordinates_scatter.x - x0_l < 2+2e-6  &                                   coordinates_scatter.y - y0 < round(40/sqrt(3))*sqrt(3) - sqrt(3)/2+2e-6 & coordinates_scatter.y - y0 > 0;
-        keep_right_lead = coordinates_scatter.x - x0_r < 2+2e-6 & coordinates_scatter.x - x0_r > 0 & coordinates_scatter.y - y0 < round(40/sqrt(3))*sqrt(3) - sqrt(3)/2+2e-6 & coordinates_scatter.y - y0 > 0;
-
-        not_lead = ~keep_left_lead & ~keep_right_lead;        
-
-        remove_left  = coordinates_scatter.x < - floor(( obj.width*2 - obj.lead_width )/2*1.5/3)*3                   - 0.5 - 1e-6; % x0_l + 3
-        remove_right = coordinates_scatter.x > - floor(( obj.width*2 - obj.lead_width )/2*1.5/3)*3 + obj.width*2*1.5 - 0.5 - 1e-6;
-%}
         % determine sites to be removed
         indexes_hole = (coordinates_scatter.x - obj.cCircle_in.center.x).^2 + (coordinates_scatter.y - obj.cCircle_in.center.y).^2 <= obj.cCircle_in.radius^2;
 
@@ -151,18 +135,6 @@ end
             
         %removing the sites of the inner hole        
         CreateH.RemoveSites( indexes_hole | indexes_out );
-%{
-        figure
-        plot( coordinates_scatter.x, coordinates_scatter.y, 'bx')
-        hold on      
-        
-        plot( coordinates_scatter.x(~( indexes_out | remove_left | remove_right)), coordinates_scatter.y(~( indexes_out | remove_left | remove_right)), 'kx');
-         
-        plot( coordinates_scatter.x( keep_left_lead | keep_right_lead), coordinates_scatter.y( keep_left_lead | keep_right_lead), 'rx');      
-        
-        %removing the sites of the inner hole account for leads        
-        %CreateH.RemoveSites( indexes_hole | (indexes_out | remove_left | remove_right ) & not_lead );
-%}      
                 
         % obtaining the modified coordinates
         coordinates_scatter = CreateH.Read('coordinates');
