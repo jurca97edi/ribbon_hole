@@ -50,7 +50,7 @@ end
     resolution=str2num(resolution);
     
     % imaginary part of the Fermi energy
-    eta = 1e-5;
+    eta = 1e-7;
     
     % The outfilename
     outfilename = [fncname, '_',num2str( filenum )];
@@ -63,60 +63,59 @@ end
     % Loading the input parameters
     [Opt, param] = parseInput( inputXML );
     
-    %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+    
     %dope the leads, usally 1
     dope = 1;%.5;
-    
-    % setting the Fermi energy in the superconducting lead
-    param.Leads{1}.epsilon = param.Leads{1}.epsilon - dope;
-    param.Leads{2}.epsilon = param.Leads{2}.epsilon - dope;
-    
-    %set to 0.5 for most calculations
-    %shift all epsilon
-    
     mu_N = 0.5;
-    
+
+    % class representing the two terminal ribbon structure
+
+    % the width in the middle in l.c.
+    middle_width = 2*width;
+    %middle_width = 2*width + 4;
+    lead_width = 1.5*width;
+
+    % setting the Fermi energy in the leads    
+    param.Leads{1}.epsilon = - dope;
+    param.Leads{2}.epsilon = - dope;
+    param.Leads{1}.M = lead_width;
+    param.Leads{2}.M = lead_width;
+
+    %take into account the lattice constant
+    R = sqrt((width*1.5)^2+900); 
+
+    %coordinates of inner circle
+    cCircle_in = structures('circle');
+    cCircle_in.center.x = lead_width/2*1.5;
+    cCircle_in.center.y = (height)*sqrt(3)/2;
+    cCircle_in.radius = Circ_in*R;
+
+    % outher circle
+    cCircle_out = structures('circle');
+    cCircle_out.center = cCircle_in.center;
+    cCircle_out.radius = R;
+
     param.scatter.epsilon = param.scatter.epsilon - mu_N;
-    
-    %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-    param.Leads{1}.M = width;
-    param.Leads{2}.M = width;
-    
+
     Delta = max( [param.Leads{1}.pair_potential, param.Leads{2}.pair_potential]);
-       
     
     setOutputDir();       
        
     % class representing the two terminal ribbon structure
     cRibbon = [];
     
-    % the width in the middle
-    middle_width = 2*width;
-
-    % the inner hole
-    cCircle_in = structures('circle');
-    cCircle_in.center.x = (width+1)/2;
-    cCircle_in.center.y = (height+1)*sqrt(3)/2;
-    cCircle_in.radius = Circ_in*width;
-    
-    % outher circle
-    cCircle_out = structures('circle');
-    cCircle_out.center = cCircle_in.center;
-    cCircle_out.radius = Circ_out*width;
-    
     % setting the energy and tranverse momentum grids for the calculations
     [Evec, phivec] = setVectors();
 
     
     % The calculated density of states
-    density_of_states_upper_electron = zeros( length(Evec), length(phivec));
-    density_of_states_upper_hole = zeros( length(Evec), length(phivec));
-    density_of_states_lower_electron = zeros( length(Evec), length(phivec));
-    density_of_states_lower_hole = zeros( length(Evec), length(phivec));
+    density_of_states_right_electron = zeros( length(Evec), length(phivec));
+    density_of_states_right_hole = zeros( length(Evec), length(phivec));
+    density_of_states_left_electron = zeros( length(Evec), length(phivec));
+    density_of_states_left_hole = zeros( length(Evec), length(phivec));
     
-    polarization_upper = zeros( length(Evec), length(phivec));
-    polarization_lower = zeros( length(Evec), length(phivec));
+    polarization_right = zeros( length(Evec), length(phivec));
+    polarization_left = zeros( length(Evec), length(phivec));
 
     % creating function handle for the Hamiltonians
     Opt.BdG = false;
@@ -127,7 +126,7 @@ end
 
     % creating the NTerminal class
     cRibbon = Ribbon_hole('width', width, 'height', height, 'Opt', Opt, 'param', param, 'filenameOut', fullfile( outputdir, [outfilename, '.xml']), ...
-                       'leadmodel', hLeadModel, 'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width); 
+                       'leadmodel', hLeadModel, 'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width, 'lead_width', lead_width); 
                        
     %{
     cRibbon.Transport(1e-2, 'gfininvfromHamiltonian', true);                       
@@ -167,8 +166,8 @@ end
     % close parallel pool
     %parallelmanager.closePool();  
     
-    save( [outputdir,'/',outfilename, '.mat'], 'Evec', 'height', 'EF', 'density_of_states_upper_electron', 'phivec', ...
-                'density_of_states_upper_hole','density_of_states_lower_electron','density_of_states_lower_hole','flux' );
+    save( [outputdir,'/',outfilename, '.mat'], 'Evec', 'height', 'EF', 'density_of_states_right_electron', 'phivec', ...
+                'density_of_states_right_hole','density_of_states_left_electron','density_of_states_left_hole','flux' );
 
     %EgeszAbraP(); 
 
@@ -179,14 +178,16 @@ end
     function [Evec, phivec] = setVectors()
         
         %Delta_E = 0.001;
-        Delta_E = Delta/100;
-        Evec = EF - Delta_E:2*Delta_E/resolution:EF + Delta_E;
-        %Evec = (0.4*min(abs(Delta)):max(abs(Delta))/50:0.8*max(abs(Delta)));
+        %E_window = max(abs(Delta))/5;
+        %Evec = EF - E_window:2*E_window/resolution:EF + E_window;
+        %if max(abs(Delta)) < 0.1
+        Evec = 0:max(abs(Delta))*1.05/resolution:1.05*max(abs(Delta));
+        %end
         
         phivec_length = pi;
-        %phivec = 0:phivec_length/resolution:phivec_length;
-        phivec = [pi/3];
-
+        phivec = 0:phivec_length/2:phivec_length;
+        %phivec = 0:phivec_length/(resolution-1):phivec_length;
+        %phivec = [pi/3,2*pi/3];
     end
 
 %% CalculateSpectralDensity
@@ -207,14 +208,14 @@ end
             disp(['Calculating Greens function for the phase difference phi=', num2str(phi)]) 
                 
             % temporary array to store the calculated DOS
-            Rho_upper_electron = zeros( length(Evec), 1);
-            Rho_upper_hole     = zeros( length(Evec), 1);
-            Rho_lower_electron = zeros( length(Evec), 1);
-            Rho_lower_hole     = zeros( length(Evec), 1);
+            Rho_right_electron = zeros( length(Evec), 1);
+            Rho_right_hole     = zeros( length(Evec), 1);
+            Rho_left_electron = zeros( length(Evec), 1);
+            Rho_left_hole     = zeros( length(Evec), 1);
             
             % creating the NTerminal class
             cRibbon = Ribbon_hole('width', width, 'height', height, 'Opt', Opt, 'param', param, 'filenameOut', fullfile( outputdir, [outfilename, '.xml']), ...
-                     'leadmodel', hLeadModel, 'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width); 
+                     'leadmodel', hLeadModel, 'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width, 'lead_width', lead_width); 
                
             % creating funcfion handles for the magnetic vector potentials
             CreateHandlesForMagneticField( flux )
@@ -228,28 +229,33 @@ end
                 case 'inner'
                     hChoseSites = @ChoseSitesInner;
             end
-            %hChoseSites = @ChoseSites;           
+
             hScatterPot = @ScatterPot;
-            
+
             %for jdx=1:length(Evec)
             parfor jdx=1:length(Evec)
                  Energy = Evec(jdx);                 
-                 
+
                  % create an instance of class DOS to calculate the density of states along the whole scattering region
                  DOS_handles = DOS( Opt, 'junction', cRibbon, 'useSelfEnergy', false, 'scatterPotential', hScatterPot);
-                 
+
                  % calculate the local DOS along the whole scattering region
                  cLocalDOS = DOS_handles.LocalDOSCalc( Energy+1i*eta, 'ChoseSites', hChoseSites  );
-                         
-                 % determine the sites of the bottom layer
-                 lower_sites = cLocalDOS.coordinates.x < mean(cLocalDOS.coordinates.x);              
-                             
-                 % determine the Density of states for the upper/lower electrons/holes
-                 Rho_upper_electron(jdx) = sum(cLocalDOS.DOSvec( (~lower_sites) & cLocalDOS.coordinates.BdG_u ));                   
-                 Rho_upper_hole(jdx)     = sum(cLocalDOS.DOSvec( (~lower_sites) & (~cLocalDOS.coordinates.BdG_u) ));                   
-                 Rho_lower_electron(jdx) = sum(cLocalDOS.DOSvec( (lower_sites) & cLocalDOS.coordinates.BdG_u ));                   
-                 Rho_lower_hole(jdx)     = sum(cLocalDOS.DOSvec( (lower_sites) & (~cLocalDOS.coordinates.BdG_u) ));   
-                              
+
+                 % determine the sites of the left side
+                 left_sites = cLocalDOS.coordinates.x < cCircle_in.center.x;              
+
+                 % Right side
+                 Rho_right_electron(jdx) = sum(cLocalDOS.DOSvec( (~left_sites) & cLocalDOS.coordinates.BdG_u ));                   
+                 Rho_right_hole(jdx)     = sum(cLocalDOS.DOSvec( (~left_sites) & (~cLocalDOS.coordinates.BdG_u) ));                   
+
+                 % Left side
+                 Rho_left_electron(jdx) = sum(cLocalDOS.DOSvec( (left_sites) & cLocalDOS.coordinates.BdG_u ));                   
+                 Rho_left_hole(jdx)     = sum(cLocalDOS.DOSvec( (left_sites) & (~cLocalDOS.coordinates.BdG_u) ));  
+
+%                 CreateH = cRibbon.CreateH();
+%                 H = CreateH.Read('Hscatter');
+
 %                % setting the current energy
 %                cRibbon.setEnergy( Energy+1i*eta );
 %                
@@ -266,42 +272,41 @@ end
 %                DOSvec = DOSvec( 1:length(coordinates.z) );
 %                
 %                % determine the sites of the bottom layer
-%                lower_sites = abs(coordinates.z) < 0.5*max(coordinates.z); 
+%                left_sites = abs(coordinates.z) < 0.5*max(coordinates.z); 
 %                
-%                % determine the Density of states for the upper/lower electrons/holes
-%                Rho_upper_electron(jdx) = sum(DOSvec( (~lower_sites) & coordinates.BdG_u ));                   
-%                Rho_upper_hole(jdx)     = sum(DOSvec( (~lower_sites) & (~coordinates.BdG_u) ));                   
-%                Rho_lower_electron(jdx) = sum(DOSvec( (lower_sites) & coordinates.BdG_u ));                   
-%                Rho_lower_hole(jdx)     = sum(DOSvec( (lower_sites) & (~coordinates.BdG_u) ));   
-                
+%                % determine the Density of states for the right/left electrons/holes
+%                Rho_right_electron(jdx) = sum(DOSvec( (~left_sites) & coordinates.BdG_u ));                   
+%                Rho_right_hole(jdx)     = sum(DOSvec( (~left_sites) & (~coordinates.BdG_u) ));                   
+%                Rho_left_electron(jdx) = sum(DOSvec( (left_sites) & coordinates.BdG_u ));                   
+%                Rho_left_hole(jdx)     = sum(DOSvec( (left_sites) & (~coordinates.BdG_u) ));   
+
             end
-            
-            density_of_states_upper_electron(:,idx) = Rho_upper_electron;
-            density_of_states_upper_hole(:,idx)     = Rho_upper_hole;
-            denominator = Rho_upper_electron + Rho_upper_hole;
-            denominator ( denominator == 0 ) = 1;
-            polarization_upper(:,idx) = ( Rho_upper_electron - Rho_upper_hole )./ denominator ;
-            
-            density_of_states_lower_electron(:,idx) = Rho_lower_electron;
-            density_of_states_lower_hole(:,idx)     = Rho_lower_hole;
-            denominator = Rho_lower_electron + Rho_lower_hole;
-            denominator ( denominator == 0 ) = 1;
-            polarization_lower(:,idx) = ( Rho_lower_electron - Rho_lower_hole )./ denominator ;
-            
+
+            density_of_states_right_electron(:,idx) = Rho_right_electron;
+            density_of_states_right_hole(:,idx)     = Rho_right_hole;
+%            denominator = Rho_right_electron + Rho_right_hole;
+%            denominator ( denominator == 0 ) = 1;
+%            polarization_right(:,idx) = ( Rho_right_electron - Rho_right_hole )./ denominator ;
+
+            density_of_states_left_electron(:,idx) = Rho_left_electron;
+            density_of_states_left_hole(:,idx)     = Rho_left_hole;
+%            denominator = Rho_left_electron + Rho_left_hole;
+%            denominator ( denominator == 0 ) = 1;
+%            polarization_left(:,idx) = ( Rho_left_electron - Rho_left_hole )./ denominator ;
+
             % calculated data are plotted at each step
-            %EgeszAbra()
-            EgeszAbra2();
-            
+            EgeszAbra()
+
+            %EgeszAbra2(idx);
+
             % exporting the calculated data
-            save( [outputdir,'/',outfilename, '.mat'], 'Evec', 'height', 'EF', 'density_of_states_upper_electron', 'phivec', ...
-                'density_of_states_upper_hole','density_of_states_lower_electron','density_of_states_lower_hole','flux' );
-            
+            save( [outputdir,'/',outfilename, '.mat'], 'Evec', 'height', 'EF', 'density_of_states_right_electron', 'phivec', ...
+                'density_of_states_right_hole','density_of_states_left_electron','density_of_states_left_hole','flux' );
+
             % displaying the status of the calculations
             disp([ num2str(idx/length(phivec)*100),' % calculated of the density of states.'])
         end
-        
-        
-                
+     
     end
 
 
@@ -349,50 +354,35 @@ end
                             'transversepotential', transversepotential, ...
                             'SelfEnergy', SelfEnergy, ...
                             'SurfaceGreensFunction', SurfaceGreensFunction);
-
-    % perform gauge transformation
-    [~, ~, hgauge_field ] = createVectorPotential( -flux );
-
-    % retriving the corrdinates
-    coordinates = cLead.Read('coordinates');
-    kulso_szabfokok = cLead.Read('kulso_szabfokok');
-    
-    % creating objet to perform gauge transformation
-    cPeierls = Peierls(Opt);
-
-    gsurf_inv = cLead.Read('gsurfinv');
-
-    coordinates = coordinates.KeepSites(kulso_szabfokok);
-
-    gsurf_inv = cPeierls.gaugeTransformation( gsurf_inv, coordinates, hgauge_field );
-
-    % saving the gauge transformed Greens function
-    
-    cLead.Write('gsurfinv', gsurf_inv);
-    
+                        
     end 
-    function ret = ScatterPot( CreateH , Energy)
+    function ret = ScatterPot( CreateH, Energy )
     
         coordinates = CreateH.Read('coordinates');
         x = coordinates.x;
         y = coordinates.y;
-        BdG_u = coordinates.BdG_u;
         
         Hscatter = CreateH.Read('Hscatter');
-        
+
         % sites on the right side of the scattering r.
-        sites2shift_right = x >= cCircle_in.center.x & abs( y - cCircle_in.center.y ) < 20; % 1 unit dist. is 0.142 nm
-        sites2shift_left  = x  < cCircle_in.center.x & abs( y - cCircle_in.center.y ) < 20; 
+        sites2shift_left  = x  < cCircle_in.center.x & abs( y - cCircle_in.center.y ) < 20;
+        sites2shift_right = x >= cCircle_in.center.x & abs( y - cCircle_in.center.y ) < 20;
+
+%        sites2shift_left  = x  < cCircle_in.center.x & abs( y - cCircle_in.center.y ) < 20 & x > - floor(( width*2 - lead_width )/2*1.5/3)*3 - 0.5 - 1e-6; 
+%        sites2shift_right = x >= cCircle_in.center.x & abs( y - cCircle_in.center.y ) < 20 & x < - floor(( width*2 - lead_width )/2*1.5/3)*3 + width*2*1.5 - 0.5; % 1 unit dist. is 0.142 nm
         
-        % shift the on-site energy - take into account the BdG Ham.
-        Hscatter = Hscatter + sparse(1:length(x),1:length(x), ( sites2shift_right & BdG_u )*( EF + mu_N ) - ( sites2shift_right & ~BdG_u )*( EF + mu_N ),length(x),length(x)) ...
-                            + sparse(1:length(x),1:length(x), ( sites2shift_left & BdG_u )*( -EF + mu_N ) - ( sites2shift_left & ~BdG_u )*( -EF + mu_N ),length(x),length(x));
+        % shift up the on-site energy on the right side and down on the
+        % left side with EF
+        fact = -(-1).^coordinates.BdG_u;
+        
+        Hscatter = Hscatter + sparse(1:length(x),1:length(x), sites2shift_right*( EF + mu_N ).*fact,length(x),length(x)) ...
+                            + sparse(1:length(x),1:length(x), sites2shift_left* (-EF + mu_N ).*fact,length(x),length(x));                                
+
         %no shift
-        %Hscatter = Hscatter + sparse(1:length(x),1:length(x), ( sites2shift_right & BdG_u )*( mu_N ) - ( sites2shift_right & ~BdG_u )*( mu_N ),length(x),length(x)) ...
-        %                    + sparse(1:length(x),1:length(x), ( sites2shift_left & BdG_u )*(  mu_N ) - ( sites2shift_left & ~BdG_u )*(  mu_N ),length(x),length(x));
+        %Hscatter = Hscatter + sparse(1:length(x),1:length(x), ( sites2shift_right & BdG_u )*( EF + mu_N ) - ( sites2shift_right & ~BdG_u )*( EF + mu_N ),length(x),length(x)) ...
+        %                    + sparse(1:length(x),1:length(x), ( sites2shift_left & BdG_u )*(  EF + mu_N ) - ( sites2shift_left & ~BdG_u )*(  EF + mu_N ),length(x),length(x));
                         
         CreateH.Write('Hscatter', Hscatter);
-
 %{
         figure1 = figure('rend','painters','pos',[10 10 900 400]);
   
@@ -409,9 +399,9 @@ end
         legend('Scattering region','Shift by +EF', 'Shift by -EF');
         
         print('-dpng', fullfile(outputdir,['scatterplot']))
-        close(figure1);
+        %close(figure1);
 %}        
-        ret = zeros(1,length(x));      
+        ret = zeros(1,length(coordinates.x));
     end
  
 
@@ -433,7 +423,6 @@ end
         
         % creting the funciton handles of the vector potentials
         hLead = @(x,y)(CircularVectorPotential(x,y, 0, cCircle_in));
-        
         hScatter = @(x,y)(ConstantVectorPotential(x,y, flux , cCircle_in ));
         hgauge_field = @(x,y)(CircularGaugeField(x,y, flux, cCircle_in));
 
@@ -445,7 +434,7 @@ end
 % ********************** plot the DOS ***********************
 
         % determine points to be plotted
-        indexes = logical( density_of_states_upper_electron(1,:));
+        indexes = logical( density_of_states_right_electron(1,:));
         
         if length(phivec(indexes)) < 2
             return
@@ -459,7 +448,7 @@ end
         fontsize = 12;        
 
         % define the colorbar limits
-        colbarlimits = [min(min(real(log(density_of_states_upper_electron)))) max(max(real(log(density_of_states_upper_electron))))];
+        colbarlimits = [min(min(real(log(density_of_states_right_electron)))) max(max(real(log(density_of_states_right_electron))))];
         
         % define the axis limits
         x_lim = [min(phivec) max(phivec)];
@@ -467,7 +456,7 @@ end
         %y_lim = [min(Evec) max(Evec)]/0.1;%the usual value of Delta
         
         
-        axes_DOS_upper_electron = axes('Parent',figure1, ...
+        axes_DOS_right_electron = axes('Parent',figure1, ...
                 'Visible', 'on',...
                 'FontSize', fontsize,... 
                 'xlim', x_lim,...           
@@ -481,23 +470,23 @@ end
         % plot the data
         [X,Y] = meshgrid( phivec(indexes), Evec );
         levelnum = 50;
-        density_of_states2plot = real(log(density_of_states_upper_electron(:,indexes)));
+        density_of_states2plot = real(log(density_of_states_right_electron(:,indexes)));
         db=1;
         contour(X(1:db:end,1:db:end), Y(1:db:end,1:db:end)/min(abs(Delta)), density_of_states2plot(1:db:end,1:db:end), levelnum ,'LineStyle','none','Fill','on',...   'LevelList',[0.2391 0.2866 0.3342 0.3817 0.4293 0.4769 0.5244 0.572 0.6195 0.6671 0.7147 0.7622 0.8098 0.8573 0.9049 0.9524],...
-           'Parent', axes_DOS_upper_electron);
+           'Parent', axes_DOS_right_electron);
        
         
         % Create xlabel
-        xlabel('\Phi','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_electron);
+        xlabel('\Delta\theta RE','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_right_electron);
         
         % Create ylabel
-        ylabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_electron);
+        ylabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_right_electron);
         
         
         
         %---------------------------------------------------------------
 
-        axes_DOS_upper_hole = axes('Parent',figure1, ...
+        axes_DOS_right_hole = axes('Parent',figure1, ...
                 'Visible', 'on',...
                 'FontSize', fontsize,... 
                 'xlim', x_lim,...           
@@ -511,22 +500,22 @@ end
         % plot the data
         [X,Y] = meshgrid( phivec(indexes), Evec );
         levelnum = 50;
-        density_of_states2plot = real(log(density_of_states_upper_hole(:,indexes)));
+        density_of_states2plot = real(log(density_of_states_right_hole(:,indexes)));
         db=1;
         contour(X(1:db:end,1:db:end), Y(1:db:end,1:db:end)/min(abs(Delta)), density_of_states2plot(1:db:end,1:db:end), levelnum ,'LineStyle','none','Fill','on',...   'LevelList',[0.2391 0.2866 0.3342 0.3817 0.4293 0.4769 0.5244 0.572 0.6195 0.6671 0.7147 0.7622 0.8098 0.8573 0.9049 0.9524],...
-           'Parent', axes_DOS_upper_hole);
+           'Parent', axes_DOS_right_hole);
         
         % Create xlabel
-        xlabel('\Phi','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_hole);
+        xlabel('\Delta\theta RH','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_right_hole);
         
         % Create ylabel
-        ylabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_hole);
+        ylabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_right_hole);
         
         
         
         %---------------------------------------------------------------
 
-        axes_DOS_lower_electron = axes('Parent',figure1, ...
+        axes_DOS_left_electron = axes('Parent',figure1, ...
                 'Visible', 'on',...
                 'FontSize', fontsize,... 
                 'xlim', x_lim,...           
@@ -540,22 +529,22 @@ end
         % plot the data
         [X,Y] = meshgrid( phivec(indexes), Evec );
         levelnum = 50;
-        density_of_states2plot = real(log(density_of_states_lower_electron(:,indexes)));
+        density_of_states2plot = real(log(density_of_states_left_electron(:,indexes)));
         db=1;
         contour(X(1:db:end,1:db:end), Y(1:db:end,1:db:end)/min(abs(Delta)), density_of_states2plot(1:db:end,1:db:end), levelnum ,'LineStyle','none','Fill','on',...   'LevelList',[0.2391 0.2866 0.3342 0.3817 0.4293 0.4769 0.5244 0.572 0.6195 0.6671 0.7147 0.7622 0.8098 0.8573 0.9049 0.9524],...
-           'Parent', axes_DOS_lower_electron);
+           'Parent', axes_DOS_left_electron);
         
         % Create xlabel
-        xlabel('\Phi','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower_electron);
+        xlabel('\Delta\theta LE','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_left_electron);
         
         % Create ylabel
-        ylabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower_electron);
+        ylabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_left_electron);
         
         
         
         %---------------------------------------------------------------
 
-        axes_DOS_lower_hole = axes('Parent',figure1, ...
+        axes_DOS_left_hole = axes('Parent',figure1, ...
                 'Visible', 'on',...
                 'FontSize', fontsize,... 
                 'xlim', x_lim,...           
@@ -569,16 +558,16 @@ end
         % plot the data
         [X,Y] = meshgrid( phivec(indexes), Evec );
         levelnum = 50;
-        density_of_states2plot = real(log(density_of_states_lower_hole(:,indexes)));
+        density_of_states2plot = real(log(density_of_states_left_hole(:,indexes)));
         db=1;
         contour(X(1:db:end,1:db:end), Y(1:db:end,1:db:end)/min(abs(Delta)), density_of_states2plot(1:db:end,1:db:end), levelnum ,'LineStyle','none','Fill','on',...   'LevelList',[0.2391 0.2866 0.3342 0.3817 0.4293 0.4769 0.5244 0.572 0.6195 0.6671 0.7147 0.7622 0.8098 0.8573 0.9049 0.9524],...
-           'Parent', axes_DOS_lower_hole);
+           'Parent', axes_DOS_left_hole);
         
         % Create xlabel
-        xlabel('\Phi','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower_hole);
+        xlabel('\Delta\theta LH','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_left_hole);
         
         % Create ylabel
-        ylabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower_hole);
+        ylabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_left_hole);
        
         
         
@@ -586,38 +575,38 @@ end
         figure_pos = get( figure1, 'Position' );
         
         %set the position of the axes_DOS
-        OuterPosition = get(axes_DOS_upper_electron, 'OuterPosition');
+        OuterPosition = get(axes_DOS_right_electron, 'OuterPosition');
         OuterPosition(1) = 0;
         OuterPosition(2) = figure_pos(4)/2;
         OuterPosition(3) = figure_pos(3)/2;
         OuterPosition(4) = figure_pos(4)/2;
-        set(axes_DOS_upper_electron, 'OuterPosition', OuterPosition);  
+        set(axes_DOS_right_electron, 'OuterPosition', OuterPosition);  
         
         %set the position of the axes_pot
-        OuterPosition = get(axes_DOS_upper_hole, 'OuterPosition');
+        OuterPosition = get(axes_DOS_right_hole, 'OuterPosition');
         OuterPosition(1) = figure_pos(3)/2;
         OuterPosition(2) = figure_pos(4)/2;
         OuterPosition(3) = figure_pos(3)/2;
         OuterPosition(4) = figure_pos(4)/2;
-        set(axes_DOS_upper_hole, 'OuterPosition', OuterPosition);  
+        set(axes_DOS_right_hole, 'OuterPosition', OuterPosition);  
         
         
         
         %set the position of the axes_DOS
-        OuterPosition = get(axes_DOS_lower_electron, 'OuterPosition');
+        OuterPosition = get(axes_DOS_left_electron, 'OuterPosition');
         OuterPosition(1) = 0;
         OuterPosition(2) = 0;
         OuterPosition(3) = figure_pos(3)/2;
         OuterPosition(4) = figure_pos(4)/2;
-        set(axes_DOS_lower_electron, 'OuterPosition', OuterPosition); 
+        set(axes_DOS_left_electron, 'OuterPosition', OuterPosition); 
         
         %set the position of the axes_pot
-        OuterPosition = get(axes_DOS_lower_hole, 'OuterPosition');
+        OuterPosition = get(axes_DOS_left_hole, 'OuterPosition');
         OuterPosition(1) = figure_pos(3)/2;
         OuterPosition(2) = 0;
         OuterPosition(3) = figure_pos(3)/2;
         OuterPosition(4) = figure_pos(4)/2;
-        set(axes_DOS_lower_hole, 'OuterPosition', OuterPosition);      
+        set(axes_DOS_left_hole, 'OuterPosition', OuterPosition);      
 
         
         print('-depsc2', [outputdir,'/',outfilename,'.eps'])
@@ -625,12 +614,12 @@ end
         
         
     end
-    function EgeszAbra2()
+    function EgeszAbra2(idx)
         
 % ********************** plot the DOS ***********************
 
         % determine points to be plotted
-        indexes = logical( density_of_states_upper_electron(1,:));
+        indexes = logical( density_of_states_right_electron(1,:));
         
         % creating figure in units of pixels
         figure1 = figure( 'Units', 'Pixels', 'Visible', 'on','pos',[0 0 900 400]);%, 'Colormap', ... % summer, 'pos',[10 10 900 700] );%, ...
@@ -639,16 +628,16 @@ end
         % font size on the figure will be 16 points
         fontsize = 12;
 
-        DOS_sum_upper  = real(density_of_states_upper_electron(:,indexes)) + real(density_of_states_upper_hole(:,indexes));
-        DOS_diff_upper = real(density_of_states_upper_electron(:,indexes)) - real(density_of_states_upper_hole(:,indexes));
-        DOS_sum_lower  = real(density_of_states_lower_electron(:,indexes)) + real(density_of_states_lower_hole(:,indexes));
-        DOS_diff_lower = real(density_of_states_lower_electron(:,indexes)) - real(density_of_states_lower_hole(:,indexes));
+        DOS_sum_right  = real(density_of_states_right_electron(:,idx)) + real(density_of_states_right_hole(:,idx));
+        DOS_diff_right = real(density_of_states_right_electron(:,idx)) - real(density_of_states_right_hole(:,idx));
+        DOS_sum_left  = real(density_of_states_left_electron(:,idx)) + real(density_of_states_left_hole(:,idx));
+        DOS_diff_left = real(density_of_states_left_electron(:,idx)) - real(density_of_states_left_hole(:,idx));
         % define the axis limits        
         
         x_lim = [min(Evec) max(Evec)];%/min(abs(Delta));
-        y_lim = [min([min(DOS_diff_upper),min(DOS_diff_lower)]) 1.05*max([max(DOS_sum_upper),max(DOS_sum_lower)])];
+        y_lim = [min([min(DOS_diff_right),min(DOS_diff_left)]) 1.05*max([max(DOS_sum_right),max(DOS_sum_left)])];
         
-        axes_DOS_upper = axes('Parent',figure1, ...
+        axes_DOS_right = axes('Parent',figure1, ...
                 'Visible', 'on',...
                 'FontSize', fontsize,... 
                 'xlim', x_lim,...           
@@ -659,20 +648,20 @@ end
         hold on; 
         
         % plot the data
-        plot(Evec,DOS_sum_upper,'LineStyle','-','Color','red','Parent', axes_DOS_upper)
-        plot(Evec,DOS_diff_upper,'LineStyle','-','Color','blue','Parent', axes_DOS_upper)
+        plot(Evec,DOS_sum_right,'LineStyle','-','Color','red','Parent', axes_DOS_right)
+        plot(Evec,DOS_diff_right,'LineStyle','-','Color','blue','Parent', axes_DOS_right)
         
         % Create xlabel
-        xlabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper);
+        xlabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_right);
         
         % Create ylabel
-        ylabel('Left side','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper);
+        ylabel('Left side','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_right);
         
         legend({'$\rho_{e}+\rho_{h}$','$\rho_{e}-\rho_{h}$'},'Interpreter','Latex','FontSize',fontsize,'Location','best');
         
         %---------------------------------------------------------------
 
-        axes_DOS_lower = axes('Parent',figure1, ...
+        axes_DOS_left = axes('Parent',figure1, ...
                 'Visible', 'on',...
                 'FontSize', fontsize,... 
                 'xlim', x_lim,...           
@@ -683,20 +672,20 @@ end
         hold on; 
         
         % plot the data
-        plot(Evec,DOS_sum_lower,'LineStyle','-','Color','red','Parent', axes_DOS_lower)
-        plot(Evec,DOS_diff_lower,'LineStyle','-','Color','blue','Parent', axes_DOS_lower)
+        plot(Evec,DOS_sum_left,'LineStyle','-','Color','red','Parent', axes_DOS_left)
+        plot(Evec,DOS_diff_left,'LineStyle','-','Color','blue','Parent', axes_DOS_left)
         
         % Create xlabel
-        xlabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower);
+        xlabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_left);
         
         % Create ylabel
-        ylabel('Right side','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower);
+        ylabel('Right side','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_left);
         
         legend({'$\rho_{e}+\rho_{h}$','$\rho_{e}-\rho_{h}$'},'Interpreter','Latex','FontSize',fontsize,'Location','best');
 
         %---------------------------------------------------------------
 %{
-        axes_DOS_lower_electron = axes('Parent',figure1, ...
+        axes_DOS_left_electron = axes('Parent',figure1, ...
                 'Visible', 'on',...
                 'FontSize', fontsize,... 
                 'xlim', x_lim,...           
@@ -707,21 +696,21 @@ end
         hold on; 
         
         % plot the data
-        density_of_states2plot = real(density_of_states_lower_electron(:,indexes));
-        plot(Evec,density_of_states2plot,'LineStyle','-','Color','k','Parent', axes_DOS_lower_electron)
+        density_of_states2plot = real(density_of_states_left_electron(:,indexes));
+        plot(Evec,density_of_states2plot,'LineStyle','-','Color','k','Parent', axes_DOS_left_electron)
         
         
         % Create xlabel
-        xlabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower_electron);
+        xlabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_left_electron);
         
         % Create ylabel
-        ylabel('DOS','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower_electron);
+        ylabel('DOS','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_left_electron);
         
         
         
         %---------------------------------------------------------------
 
-        axes_DOS_lower_hole = axes('Parent',figure1, ...
+        axes_DOS_left_hole = axes('Parent',figure1, ...
                 'Visible', 'on',...
                 'FontSize', fontsize,... 
                 'xlim', x_lim,...           
@@ -732,14 +721,14 @@ end
         hold on; 
         
         % plot the data
-        density_of_states2plot = real(density_of_states_lower_hole(:,indexes));
-        plot(Evec,density_of_states2plot,'LineStyle','-','Color','k','Parent', axes_DOS_lower_hole)
+        density_of_states2plot = real(density_of_states_left_hole(:,indexes));
+        plot(Evec,density_of_states2plot,'LineStyle','-','Color','k','Parent', axes_DOS_left_hole)
         
         % Create xlabel
-        xlabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower_hole);
+        xlabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_left_hole);
         
         % Create ylabel
-        ylabel('DOS','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower_hole);
+        ylabel('DOS','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_left_hole);
 %}
         
         
@@ -747,41 +736,41 @@ end
         figure_pos = get( figure1, 'Position' );
         
         %set the position of the axes_DOS
-        OuterPosition = get(axes_DOS_upper, 'OuterPosition');
+        OuterPosition = get(axes_DOS_right, 'OuterPosition');
         OuterPosition(1) = 0;
         OuterPosition(2) = 0;
         OuterPosition(3) = figure_pos(3)/2;
         OuterPosition(4) = figure_pos(4);
-        set(axes_DOS_upper, 'OuterPosition', OuterPosition);
+        set(axes_DOS_right, 'OuterPosition', OuterPosition);
         
         %set the position of the axes_pot
-        OuterPosition = get(axes_DOS_lower, 'OuterPosition');
+        OuterPosition = get(axes_DOS_left, 'OuterPosition');
         OuterPosition(1) = figure_pos(3)/2;
         OuterPosition(2) = 0;
         OuterPosition(3) = figure_pos(3)/2;
         OuterPosition(4) = figure_pos(4);
-        set(axes_DOS_lower, 'OuterPosition', OuterPosition);
+        set(axes_DOS_left, 'OuterPosition', OuterPosition);
         
         
 %{
         %set the position of the axes_DOS
-        OuterPosition = get(axes_DOS_lower_electron, 'OuterPosition');
+        OuterPosition = get(axes_DOS_left_electron, 'OuterPosition');
         OuterPosition(1) = 0;
         OuterPosition(2) = 0;
         OuterPosition(3) = figure_pos(3)/2;
         OuterPosition(4) = figure_pos(4)/2;
-        set(axes_DOS_lower_electron, 'OuterPosition', OuterPosition); 
+        set(axes_DOS_left_electron, 'OuterPosition', OuterPosition); 
         
         %set the position of the axes_pot
-        OuterPosition = get(axes_DOS_lower_hole, 'OuterPosition');
+        OuterPosition = get(axes_DOS_left_hole, 'OuterPosition');
         OuterPosition(1) = figure_pos(3)/2;
         OuterPosition(2) = 0;
         OuterPosition(3) = figure_pos(3)/2;
         OuterPosition(4) = figure_pos(4)/2;
-        set(axes_DOS_lower_hole, 'OuterPosition', OuterPosition);      
+        set(axes_DOS_left_hole, 'OuterPosition', OuterPosition);      
 %}
         
-        print('-dpng', [outputdir,'/',outfilename,'.png'])
+        print('-dpng', [outputdir,'/',outfilename,'phi_',num2str(phivec(idx)),'.png'])
         close(figure1);
         
         
@@ -791,7 +780,7 @@ end
 % ********************** plot the DOS ***********************
 
         % determine points to be plotted
-        indexes = logical( polarization_upper(1,:));
+        indexes = logical( polarization_right(1,:));
         
         if length(phivec(indexes)) < 2
             return
@@ -805,8 +794,8 @@ end
         fontsize = 12;        
         
         % define the colorbar limits
-        %mins_tmp = [ min(min(real(polarization_upper))), min(min(real(polarization_lower)))];
-        %maxs_tmp = [ max(max(real(polarization_upper))), max(max(real(polarization_lower)))];
+        %mins_tmp = [ min(min(real(polarization_right))), min(min(real(polarization_left)))];
+        %maxs_tmp = [ max(max(real(polarization_right))), max(max(real(polarization_left)))];
         
         colbarlimits = [-1 ,1];
         
@@ -816,7 +805,7 @@ end
         %y_lim = [min(Evec) max(Evec)]/0.1;
         
         
-        axes_DOS_upper = axes('Parent',figure1, ...
+        axes_DOS_right = axes('Parent',figure1, ...
                 'Visible', 'on',...
                 'FontSize', fontsize,... 
                 'xlim', x_lim,...           
@@ -830,21 +819,21 @@ end
         % plot the data
         [X,Y] = meshgrid( phivec(indexes), Evec );
         levelnum = 50;
-        density_of_states2plot = real(polarization_upper(:,indexes));
+        density_of_states2plot = real(polarization_right(:,indexes));
         db=1;
         contourf(X(1:db:end,1:db:end), Y(1:db:end,1:db:end)/min(abs(Delta)), density_of_states2plot(1:db:end,1:db:end), levelnum ,'LineStyle','none','Fill','on',...   'LevelList',[0.2391 0.2866 0.3342 0.3817 0.4293 0.4769 0.5244 0.572 0.6195 0.6671 0.7147 0.7622 0.8098 0.8573 0.9049 0.9524],...
-           'Parent', axes_DOS_upper);
+           'Parent', axes_DOS_right);
        
         
         % Create xlabel
-        xlabel('\Phi','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper);
+        xlabel('\Delta\theta','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_right);
         
         % Create ylabel
-        ylabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper);
+        ylabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_right);
         
         %---------------------------------------------------------------
 
-        axes_DOS_lower = axes('Parent',figure1, ...
+        axes_DOS_left = axes('Parent',figure1, ...
                 'Visible', 'on',...
                 'FontSize', fontsize,... 
                 'xlim', x_lim,...           
@@ -858,16 +847,16 @@ end
         % plot the data
         [X,Y] = meshgrid( phivec(indexes), Evec );
         levelnum = 50;
-        density_of_states2plot = real(polarization_lower(:,indexes));
+        density_of_states2plot = real(polarization_left(:,indexes));
         db=1;
         contourf(X(1:db:end,1:db:end), Y(1:db:end,1:db:end)/min(abs(Delta)), density_of_states2plot(1:db:end,1:db:end), levelnum ,'LineStyle','none','Fill','on',...   'LevelList',[0.2391 0.2866 0.3342 0.3817 0.4293 0.4769 0.5244 0.572 0.6195 0.6671 0.7147 0.7622 0.8098 0.8573 0.9049 0.9524],...
-           'Parent', axes_DOS_lower);
+           'Parent', axes_DOS_left);
         
         % Create xlabel
-        xlabel('\Phi','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower);
+        xlabel('\Delta\theta','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_left);
         
         % Create ylabel
-        ylabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_lower);
+        ylabel('E [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_left);
         
         cb=colorbar;
         cb.Position = [ 0.46 0.61 0.04 0.315 ];
@@ -876,20 +865,20 @@ end
         figure_pos = get( figure1, 'Position' );
         
         %set the position of the axes_DOS
-        OuterPosition = get(axes_DOS_upper, 'OuterPosition');
+        OuterPosition = get(axes_DOS_right, 'OuterPosition');
         OuterPosition(1) = 0;
         OuterPosition(2) = figure_pos(4)/2;
         OuterPosition(3) = figure_pos(3)/2;
         OuterPosition(4) = figure_pos(4)/2;
-        set(axes_DOS_upper, 'OuterPosition', OuterPosition);  
+        set(axes_DOS_right, 'OuterPosition', OuterPosition);  
         
         %set the position of the axes_pot
-        OuterPosition = get(axes_DOS_lower, 'OuterPosition');
+        OuterPosition = get(axes_DOS_left, 'OuterPosition');
         OuterPosition(1) = figure_pos(3)/2;
         OuterPosition(2) = figure_pos(4)/2;
         OuterPosition(3) = figure_pos(3)/2;
         OuterPosition(4) = figure_pos(4)/2;
-        set(axes_DOS_lower, 'OuterPosition', OuterPosition);  
+        set(axes_DOS_left, 'OuterPosition', OuterPosition);  
         
         print('-dpng', [outputdir,'/',outfilename,'_polarization.png'])
         close(figure1);
@@ -979,7 +968,7 @@ end
 
 %% sets the output directory
     function setOutputDir()
-        resultsdir = ['ABS_spectral_H',num2str(height),'_W',num2str(width),'_flux',num2str(flux),'_Cin',num2str(Circ_in),'_Cout',num2str(Circ_out),'_EF',num2str(EF),'_LOC',location,'_res',num2str(resolution)];
+        resultsdir = ['ABS_spectral2_H',num2str(height),'_W',num2str(width),'_flux',num2str(flux),'_Cin',num2str(Circ_in),'_Cout',num2str(Circ_out),'_EF',num2str(EF),'_LOC',location,'_res',num2str(resolution)];
         mkdir(resultsdir );
         outputdir = resultsdir;        
     end
