@@ -5,7 +5,7 @@
     function center_sites = ChoseSitesOuter( coords )
         %ribbon_length = (max(coords.y) - min(coords.y));
       
-        center_sites = abs(coords.y - mean(coords.y)) < norm(coords.a)*2;
+        center_sites = abs(coords.y - mean(coords.y)) < norm(coords.a)/2;
     
         figure1 = figure('rend','painters','pos',[10 10 1200 800]);
         
@@ -26,7 +26,6 @@
         %center_sites = abs(coords.y - mean(coords.y)) < 0.01*ribbon_length;
         
         %choosing sites in at the outer edge
-        %center_sites = center_sites & ( abs(coords.x - right_max) < branch_width/3 | abs(coords.x - left_min) < branch_width/3 ) &  coords.x - left_min > 0 & coords.x - right_max < 0;
         center_sites = center_sites & ( abs(coords.x - right_max) < branch_width/3 | abs(coords.x - left_min) < branch_width/3 );
         
         % choosing sites in the center

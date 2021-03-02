@@ -124,26 +124,7 @@ end
 
     % creating the NTerminal class
     cRibbon = Ribbon_hole('width', width, 'height', height, 'Opt', Opt, 'param', param, 'filenameOut', fullfile( outputdir, [outfilename, '.xml']), ...
-                       'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width); 
-    %{
-    Flux=[0; pi/2; pi; pi*3/2; 2*pi];
-
-    Conductance = zeros(length(Evec),1);
-               
-    for jdx=1:length(Flux)
-
-        % create handle for the piercing magnetic flux
-        flux=Flux(jdx);
-        CreateHandlesForMagneticField( flux );
-        parfor kdx=1:length(Evec)
-            Conductance(kdx) = cRibbon.Transport(Evec(kdx), 'gfininvfromHamiltonian', true);
-        end
-        disp([ num2str(jdx/length(Flux)*100),' % calculated of the conductance.'])
-        
-        ConductancePlot(flux);
-
-    end
-    %}
+             'leadmodel', hLeadModel, 'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width, 'lead_width', lead_width);     %{
                        
     %{
     cRibbon.Transport(1e-2, 'gfininvfromHamiltonian', true);                       
@@ -232,8 +213,7 @@ end
             
             % creating the NTerminal class
             cRibbon = Ribbon_hole('width', width, 'height', height, 'Opt', Opt, 'param', param, 'filenameOut', fullfile( outputdir, [outfilename, '.xml']), ...
-                     'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width); 
-                 
+                     'leadmodel', hLeadModel, 'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width, 'lead_width', lead_width);                  
             % functio handle to pick the central sites in the scattering region
             switch(location)
                 case 'outer'
@@ -382,9 +362,6 @@ end
         sites2shift_left  = x  < cCircle_in.center.x & abs( y - cCircle_in.center.y ) < 20;
         sites2shift_right = x >= cCircle_in.center.x & abs( y - cCircle_in.center.y ) < 20;
 
-%        sites2shift_left  = x  < cCircle_in.center.x & abs( y - cCircle_in.center.y ) < 20 & x > - floor(( width*2 - lead_width )/2*1.5/3)*3 - 0.5 - 1e-6; 
-%        sites2shift_right = x >= cCircle_in.center.x & abs( y - cCircle_in.center.y ) < 20 & x < - floor(( width*2 - lead_width )/2*1.5/3)*3 + width*2*1.5 - 0.5; % 1 unit dist. is 0.142 nm
-        
         % shift up the on-site energy on the right side and down on the
         % left side with EF
         fact = -(-1).^coordinates.BdG_u;

@@ -5,7 +5,7 @@
     function center_sites = ChoseSitesInner( coords )
         %ribbon_length = (max(coords.y) - min(coords.y));
       
-        center_sites = abs(coords.y - mean(coords.y)) < norm(coords.a)*2;
+        center_sites = abs(coords.y - mean(coords.y)) < norm(coords.a)/2;
     
         figure1 = figure('rend','painters','pos',[10 10 1200 800]);
         
@@ -32,7 +32,6 @@
         %center_sites2 = center_sites & ( abs(coords.x - center_right) < branch_width/6 | abs(coords.x - center_left) < branch_width/6 );
 %        plot(coords.x(center_sites2),coords.y(center_sites2),'x')
         %choosing sites in the inner edges
-%        center_sites = center_sites & ( abs(coords.x - right_min) < branch_width/3 | abs(coords.x - left_max) < branch_width/3 ) & coords.x - left_min > 0 & coords.x - right_max < 0;
         center_sites = center_sites & ( abs(coords.x - right_min) < branch_width/3 | abs(coords.x - left_max) < branch_width/3 );
         
 %{a
