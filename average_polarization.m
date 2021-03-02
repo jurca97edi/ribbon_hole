@@ -1,14 +1,17 @@
 function average_polarization()
     
-    Height=ones(1,3)*200;
-    Width=ones(1,length(Height))*300;
+    Height=ones(3,1)*300;
+    %Height=[150];
+    Width=ones(length(Height),1)*200;
+    %Width=[100];
     Flux=zeros(1,length(Height));
-    EF=0.06;
+    EF=0.0006;
     
-    Cin=[0,0,0, 0.1,0.1,0.1, 0.2,0.2,0.2, 0.3,0.3,0.3, 0.4,0.4,0.4, 0.5,0.5,0.5, 0.55,0.55,0.55];
-    Cin=[0.5,0.5,0.5];
+    Cin=ones(length(Height),1)*0.3;
+    %Cin=[0.25,0.5,0.75,0.3,0.4,0.5, 0.4,0.5];
     Cout=ones(1,length(Height))*0.7;
-    Location=["inner","outer","center","center","outer","inner","center","outer","inner","center","outer","inner","center","outer","inner","center","outer","inner","center","outer"];
+    %Location=["outer","outer","outer","center","outer","inner","center","outer","inner","center","outer","inner","center","outer","inner","center","outer","inner","center","outer"];
+    Location=["outer","center","inner"];
     Resolution=ones(1,length(Height))*1000;
     
     for i=1:length(Height)
@@ -28,49 +31,97 @@ function average_polarization()
         resultsdir = strjoin(['ABS_spectral_H',num2str(Height(i)),'_W',num2str(Width(i)),'_flux',num2str(Flux(i)),'_Cin',num2str(Cin(i)),'_Cout',num2str(Cout(i)),'_EF',num2str(EF),'_LOC',Location(i),'_res',num2str(Resolution(i))],"");
         %resultsdir
         load(strjoin([resultsdir,"/spectral_graphene_1.mat"],""))
-
-        polarization_upper1 = ( density_of_states_upper_electron + density_of_states_upper_hole );
-        polarization_upper2 = ( density_of_states_upper_electron - density_of_states_upper_hole );
-
-        polarization_lower1 = ( density_of_states_lower_electron + density_of_states_lower_hole );
-        polarization_lower2 = ( density_of_states_lower_electron - density_of_states_lower_hole );
         
-        pos1 = [0.05 0.15 0.42 0.8];
-        subplot('Position',pos1)
+        idx = 1;
+        %Right BRANCH
+        polarization_upper1 = ( density_of_states_upper_electron(:,idx) + density_of_states_upper_hole(:,idx) );
+        polarization_upper2 = ( density_of_states_upper_electron(:,idx) - density_of_states_upper_hole(:,idx) );
         
+        %Left BRANCH
+        polarization_lower1 = ( density_of_states_lower_electron(:,idx) + density_of_states_lower_hole(:,idx) );
+        polarization_lower2 = ( density_of_states_lower_electron(:,idx) - density_of_states_lower_hole(:,idx) );
+  
         fontsize=15;
-
-        plot(Evec,polarization_upper1,'color','red','LineStyle','-','LineWidth',2);
-        hold on;
-        plot(Evec,polarization_upper2,'color','blue','LineStyle','-','LineWidth',2);
-        plot([min(Evec),max(Evec)],[0,0],'k--');
-        %plot([EF,EF],[Min, Max],'k-');
-        title("Left branch, "+Location(i));
-        legend({'$\rho_{e}+\rho_{h}$','$\rho_{e}-\rho_{h}$'},'Interpreter','Latex','FontSize',fontsize,'Location','best');
-        xlim([min(Evec) max(Evec)]);%/min(abs(Delta));
-        xticks([0.059,0.06,0.061]);
-        xticklabels([0.59,0.6,0.61]);
-        xlabel('E [\Delta]','FontSize',fontsize);
-        Max = 1.05*max([abs(min([min(polarization_upper2),min(polarization_lower2)]) ),max([max(polarization_upper1),max(polarization_lower1)])]);
-        ylim([-Max Max]);       
         
-        pos2 = [0.55 0.15 0.42 0.8];
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%        
+        
+        pos2 = [0.05 0.15 0.42 0.8];
         subplot('Position',pos2)
-
-        plot(Evec,polarization_lower1,'color','red','LineStyle','-','LineWidth',2);
+          
+        Max = abs(1.05*max([max(polarization_upper1),max(polarization_lower1),10]));
+        
+        plot(Evec,polarization_lower1,'color','black','LineStyle','-','LineWidth',2);
         hold on;
         plot(Evec,polarization_lower2,'color','blue','LineStyle','-','LineWidth',2);   
-        plot([min(Evec),max(Evec)],[0,0],'k--');        
-        %plot([EF,EF],[Min, Max],'k-');
-        title("Right branch, "+Location(i));
-        legend({'$\rho_{e}+\rho_{h}$','$\rho_{e}-\rho_{h}$'},'Interpreter','Latex','FontSize',fontsize,'Location','best');
+
+        plot([EF,EF],[-Max, Max],'k--');
+        title("Left branch, "+Location(i));
+        legend({'$\rho_{e}+\rho_{h}$','$\rho_{e}-\rho_{h}$','$\mu$'},'Interpreter','Latex','FontSize',fontsize,'Location','best');
         xlim([min(Evec) max(Evec)]);%/min(abs(Delta));
-        xticks([0.059,0.06,0.061]);
-        xticklabels([0.59,0.6,0.61]);
-        xlabel('E [\Delta]','FontSize',fontsize);
+        xlabel('E [eV]','FontSize',fontsize);
         ylim([-Max Max]);   
         
-        name = ['polarization_H',num2str(Height(i)),'_W',num2str(Width(i)),'_flux',num2str(Flux(i)),'_Cin',num2str(Cin(i)),'_Cout',num2str(Cout(i)),'_EF',num2str(EF),'_LOC',location,'_res',num2str(Resolution(i)),'.png'];
+        pos1 = [0.55 0.15 0.42 0.8];
+        subplot('Position',pos1)
+      
+        plot(Evec,polarization_upper1,'color','black','LineStyle','-','LineWidth',2);
+        hold on;
+        plot(Evec,polarization_upper2,'color','blue','LineStyle','-','LineWidth',2);
+
+        plot([EF,EF],[-Max, Max],'k--');
+        title("Right branch, "+Location(i));
+        
+        legend({'$\rho_{e}+\rho_{h}$','$\rho_{e}-\rho_{h}$','$\mu$'},'Interpreter','Latex','FontSize',fontsize,'Location','best');
+        xlim([min(Evec) max(Evec)]);%/min(abs(Delta));
+        xlabel('E [eV]','FontSize',fontsize);
+        ylim([-Max Max]);        
+        
+        
+        name = ['polarization_H',num2str(Height(i)),'_W',num2str(Width(i)),'_flux',num2str(Flux(i)),'_Cin',num2str(Cin(i)),'_Cout',num2str(Cout(i)),'_EF',num2str(EF),'_LOC',location,'_res',num2str(Resolution(i)),'_idx',num2str(idx),'.png'];
+        print('-dpng', name);
+        close(figure1);
+        
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+        figure1 = figure( 'Units', 'Pixels', 'Visible', 'on' , 'pos',[10 10 800 350]);
+        hold on;
+        
+        pos2 = [0.05 0.15 0.42 0.8];
+        subplot('Position',pos2)
+          
+        lower_is_polarization = abs(polarization_lower1) > 50;
+        upper_is_polarization = abs(polarization_upper1) > 50;
+
+        Max = abs(1.05*max([max(polarization_upper1.*lower_is_polarization),max(polarization_lower1.*upper_is_polarization),10]));
+        
+        plot(Evec,polarization_lower1,'color','blue','LineStyle','-','LineWidth',2);
+        hold on;
+
+        plot(Evec,polarization_upper1,'color','red','LineStyle','-','LineWidth',2);   
+        plot([EF,EF],[-Max, Max],'k--');
+        title("Left branch, "+Location(i));
+
+        legend({'$\rho_{left}$','$\rho_{right} $','$\mu$'},'Interpreter','Latex','FontSize',fontsize,'Location','best');
+        xlim([min(Evec) max(Evec)]);%/min(abs(Delta));
+        xlabel('E [eV]','FontSize',fontsize);
+        ylim([-Max Max]);   
+        
+        pos1 = [0.55 0.15 0.42 0.8];
+        subplot('Position',pos1)
+      
+        plot(Evec,(polarization_upper1+polarization_lower1).*(lower_is_polarization & upper_is_polarization),'color','black','LineStyle','-','LineWidth',2);
+        hold on;
+
+        %plot(Evec,polarization_upper1.*lower_is_polarization,'color','red','LineStyle','-','LineWidth',2);   
+        plot([EF,EF],[-Max, Max],'k--');
+        title("Right branch, "+Location(i));
+        legend({'$\rho_{right}+ \rho_{left}$','$ $','$\mu$'},'Interpreter','Latex','FontSize',fontsize,'Location','best');
+        xlim([min(Evec) max(Evec)]);%/min(abs(Delta));
+        xlabel('E [eV]','FontSize',fontsize);
+        ylim([-Max Max]);        
+        
+        
+        name = ['polarization_diff_H',num2str(Height(i)),'_W',num2str(Width(i)),'_flux',num2str(Flux(i)),'_Cin',num2str(Cin(i)),'_Cout',num2str(Cout(i)),'_EF',num2str(EF),'_LOC',location,'_res',num2str(Resolution(i)),'_idx',num2str(idx),'.png'];
         print('-dpng', name);
         close(figure1);
     end
