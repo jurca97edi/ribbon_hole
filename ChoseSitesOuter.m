@@ -5,13 +5,13 @@
     function center_sites = ChoseSitesOuter( coords )
         %ribbon_length = (max(coords.y) - min(coords.y));
       
-        center_sites = abs(coords.y - mean(coords.y)) < norm(coords.a)/4;
+        center_sites = abs(coords.y - mean(coords.y)) < norm(coords.a)*2;
     
         figure1 = figure('rend','painters','pos',[10 10 1200 800]);
         
         plot(coords.x,coords.y,'x')
         hold on
-%{a      
+
         right_min = min(coords.x(coords.x > mean(coords.x) & center_sites));
         right_max = max(coords.x(coords.x > mean(coords.x) & center_sites));
         center_right = (right_min + right_max)/2;
@@ -19,15 +19,14 @@
         left_min = min(coords.x(coords.x < mean(coords.x) & center_sites));
         left_max = max(coords.x(coords.x < mean(coords.x) & center_sites));
         center_left = (left_min + left_max)/2;
-%}        
+
         branch_width = left_max-left_min;
 
-        sites_per_branch = 60;
-        
         %original
         %center_sites = abs(coords.y - mean(coords.y)) < 0.01*ribbon_length;
         
         %choosing sites in at the outer edge
+        %center_sites = center_sites & ( abs(coords.x - right_max) < branch_width/3 | abs(coords.x - left_min) < branch_width/3 ) &  coords.x - left_min > 0 & coords.x - right_max < 0;
         center_sites = center_sites & ( abs(coords.x - right_max) < branch_width/3 | abs(coords.x - left_min) < branch_width/3 );
         
         % choosing sites in the center
