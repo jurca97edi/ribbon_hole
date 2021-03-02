@@ -120,13 +120,30 @@ end
     % creating function handle for the Hamiltonians
     Opt.BdG = false;
 
-    hLeadModel = @LeadModel;
-
     cRibbon=[];
 
     % creating the NTerminal class
     cRibbon = Ribbon_hole('width', width, 'height', height, 'Opt', Opt, 'param', param, 'filenameOut', fullfile( outputdir, [outfilename, '.xml']), ...
-                       'leadmodel', hLeadModel, 'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width, 'lead_width', lead_width); 
+                       'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width); 
+    %{
+    Flux=[0; pi/2; pi; pi*3/2; 2*pi];
+
+    Conductance = zeros(length(Evec),1);
+               
+    for jdx=1:length(Flux)
+
+        % create handle for the piercing magnetic flux
+        flux=Flux(jdx);
+        CreateHandlesForMagneticField( flux );
+        parfor kdx=1:length(Evec)
+            Conductance(kdx) = cRibbon.Transport(Evec(kdx), 'gfininvfromHamiltonian', true);
+        end
+        disp([ num2str(jdx/length(Flux)*100),' % calculated of the conductance.'])
+        
+        ConductancePlot(flux);
+
+    end
+    %}
                        
     %{
     cRibbon.Transport(1e-2, 'gfininvfromHamiltonian', true);                       
@@ -215,11 +232,8 @@ end
             
             % creating the NTerminal class
             cRibbon = Ribbon_hole('width', width, 'height', height, 'Opt', Opt, 'param', param, 'filenameOut', fullfile( outputdir, [outfilename, '.xml']), ...
-                     'leadmodel', hLeadModel, 'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width, 'lead_width', lead_width); 
-               
-            % creating funcfion handles for the magnetic vector potentials
-            CreateHandlesForMagneticField( flux )
-
+                     'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width); 
+                 
             % functio handle to pick the central sites in the scattering region
             switch(location)
                 case 'outer'
