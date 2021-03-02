@@ -43,6 +43,8 @@ classdef Ribbon_hole < Ribbon
         cCircle_out
         %> The width of the ribbon in the middle
         middle_width
+        %> The width of the lead
+        lead_width
     end       
     
     properties (Access = public)    
@@ -95,13 +97,13 @@ end
         
         % create Hamiltonian of one unit cell of the scattering region
         Scatter_UC.CreateHamiltonians( 'toSave', 0);
-        Scatter_UC.ShiftCoordinates( obj.shift ); 
+        Scatter_UC.ShiftCoordinates( obj.shift );
         
         % shifting the coordinates
         coordinates = obj.Scatter_UC.Read('coordinates');
-        coordinates = coordinates.Shift( -(obj.middle_width - obj.width)/2*coordinates.b/obj.middle_width );
+        coordinates = coordinates.Shift( -floor((obj.middle_width - obj.lead_width )/2*[1.5; 0]/3)*3);
         Scatter_UC.Write('coordinates', coordinates );
-        
+               
         %applying transverse potential
         obj.ApplyTransversePotential( Scatter_UC )
        
@@ -122,30 +124,50 @@ end
         
         % obtaining coordinates
         coordinates_scatter = CreateH.Read('coordinates');
-        
+%        plot( coordinates_scatter.x, coordinates_scatter.y, 'bx')
+%        hold on
+%{
+        %% determine position of leads
+
+        % determine sites not be removed (only for DOS)     
+        x0_l = - floor(( obj.width*2 - obj.lead_width )/2*1.5/3)*3 - 3               - 0.5 - 1e-6;
+        x0_r = - floor(( obj.width*2 - obj.lead_width )/2*1.5/3)*3 + obj.width*2*1.5 - 0.5 - 1e-6 ;
+        y0 = round( ( obj.cCircle_out.center.y - 20)/sqrt(3) )*sqrt(3) - 1e-6;
+      
+        keep_left_lead  = coordinates_scatter.x - x0_l < 2+2e-6  &                                   coordinates_scatter.y - y0 < round(40/sqrt(3))*sqrt(3) - sqrt(3)/2+2e-6 & coordinates_scatter.y - y0 > 0;
+        keep_right_lead = coordinates_scatter.x - x0_r < 2+2e-6 & coordinates_scatter.x - x0_r > 0 & coordinates_scatter.y - y0 < round(40/sqrt(3))*sqrt(3) - sqrt(3)/2+2e-6 & coordinates_scatter.y - y0 > 0;
+
+        not_lead = ~keep_left_lead & ~keep_right_lead;        
+
+        remove_left  = coordinates_scatter.x < - floor(( obj.width*2 - obj.lead_width )/2*1.5/3)*3                   - 0.5 - 1e-6; % x0_l + 3
+        remove_right = coordinates_scatter.x > - floor(( obj.width*2 - obj.lead_width )/2*1.5/3)*3 + obj.width*2*1.5 - 0.5 - 1e-6;
+%}
         % determine sites to be removed
         indexes_hole = (coordinates_scatter.x - obj.cCircle_in.center.x).^2 + (coordinates_scatter.y - obj.cCircle_in.center.y).^2 <= obj.cCircle_in.radius^2;
-                
+
         % determine sites beyound the circular boundary
-        indexes_out =  abs(coordinates_scatter.x - obj.cCircle_out.center.x) >= obj.width/2 & ...
+        indexes_out =  floor(abs(coordinates_scatter.x - obj.cCircle_out.center.x)/coordinates.b*obj.width*2)*[1.5; 0] >= 1.5*obj.lead_width/2 & ...
             (coordinates_scatter.x - obj.cCircle_out.center.x).^2 + (coordinates_scatter.y - obj.cCircle_out.center.y).^2 > obj.cCircle_out.radius^2;
-        
-        %removing the sites of the inner hole
+            
+        %removing the sites of the inner hole        
         CreateH.RemoveSites( indexes_hole | indexes_out );
+%{
+        figure
+        plot( coordinates_scatter.x, coordinates_scatter.y, 'bx')
+        hold on      
         
+        plot( coordinates_scatter.x(~( indexes_out | remove_left | remove_right)), coordinates_scatter.y(~( indexes_out | remove_left | remove_right)), 'kx');
+         
+        plot( coordinates_scatter.x( keep_left_lead | keep_right_lead), coordinates_scatter.y( keep_left_lead | keep_right_lead), 'rx');      
+        
+        %removing the sites of the inner hole account for leads        
+        %CreateH.RemoveSites( indexes_hole | (indexes_out | remove_left | remove_right ) & not_lead );
+%}      
+                
         % obtaining the modified coordinates
         coordinates_scatter = CreateH.Read('coordinates');
+%        plot( coordinates_scatter.x, coordinates_scatter.y, 'rx')
 
-        % the weakly doped regions are 20 l.c. away from the center
-        weakly_doped_max_y = max( coordinates_scatter.y( abs(coordinates_scatter.y - obj.cCircle_in.center.y) < 20 ) );
-        weakly_doped_right_edge = coordinates_scatter.x > max( coordinates_scatter.x( coordinates_scatter.y == weakly_doped_max_y ) );
-        weakly_doped_left_edge = coordinates_scatter.x < min( coordinates_scatter.x( coordinates_scatter.y == weakly_doped_max_y ) );
-
-        CreateH.RemoveSites( weakly_doped_right_edge | weakly_doped_left_edge );
-        
-        % obtaining the modified coordinates
-        coordinates_scatter = CreateH.Read('coordinates');
-        
 %         % determine the sheet distance
 %         sheet_distance = max(coordinates_scatter.z) - min(coordinates_scatter.z);
 %         
@@ -185,9 +207,9 @@ end
         non_singular_sites_logical = abs(y_min - coordinates_scatter.y ) < 1e-6 | abs(y_max - coordinates_scatter.y ) < 1e-6 | abs(x_min - coordinates_scatter.x ) < 1e-6 | abs(x_max - coordinates_scatter.x ) < 1e-6;
         
 %         figure
-%         plot3( coordinates_scatter.x, coordinates_scatter.y, coordinates_scatter.z, 'bx')
+%         plot( coordinates_scatter.x, coordinates_scatter.y, 'bx')
 %         hold on 
-%         plot3( coordinates_scatter.x(non_singular_sites_logical), coordinates_scatter.y(non_singular_sites_logical), coordinates_scatter.z(non_singular_sites_logical), 'rx')
+%         plot( coordinates_scatter.x(non_singular_sites_logical), coordinates_scatter.y(non_singular_sites_logical), 'rx');
 
         non_singular_sites = 1:length(non_singular_sites_logical);
         non_singular_sites = non_singular_sites(non_singular_sites_logical);
@@ -237,29 +259,26 @@ end
         if length(Leads) == 2
             coordinates_shift = [1, -1 ]; %relative to the leads
         else
-            coordinates_shift = [1, 1, 1, -1 ]; %relative to the leads %% itt jelenik meg a +2 lead
+            coordinates_shift = [0, 0, 1, -1 ]; %relative to the leads
         end
         Interface_Region.ShiftCoordinates( coordinates_shift(idx) );
 
         % determine the coupling between the interface and the scattering region
         coordinates_interface = Interface_Region.Read('coordinates');
 
-        %edge_regions = sparse(coordinates_scatter.y < min(coordinates_scatter.y) + 2 | coordinates_scatter.y > max(coordinates_scatter.y) - 2);
+        edge_regions_scatter = sparse(coordinates_scatter.y == min(coordinates_scatter.y) | coordinates_scatter.y == max(coordinates_scatter.y) | coordinates_scatter.x == min(coordinates_scatter.x) | coordinates_scatter.x == max(coordinates_scatter.x) );
         
-        %% ADD THE REGIONS OF N_n AND N_p
-        edge_regions_scatter = sparse(coordinates_scatter.y == min(coordinates_scatter.y) | coordinates_scatter.y == max(coordinates_scatter.y) ) | sparse(coordinates_scatter.x == min(coordinates_scatter.x) | coordinates_scatter.x == max(coordinates_scatter.x) );
-        edge_regions_interface = sparse(coordinates_interface.y == min(coordinates_interface.y) | coordinates_interface.y == max(coordinates_interface.y) ) | sparse(coordinates_interface.x == min(coordinates_interface.x) | coordinates_interface.x == max(coordinates_interface.x) );
-        
-        distance_x = ( sparse(coordinates_interface.x.*edge_regions_interface)*( edge_regions_scatter' ) - ...
+        edge_regions_interface = sparse(ones(length(coordinates_interface.y),1));% == min(coordinates_interface.y) | coordinates_interface.y == max(coordinates_interface.y) ) | sparse(coordinates_interface.x == min(coordinates_interface.x) | coordinates_interface.x == max(coordinates_interface.x) );
+       
+        distance_x = ( sparse(coordinates_interface.x)*( edge_regions_scatter' ) - ...
                        edge_regions_interface*( coordinates_scatter.x.*edge_regions_scatter )' ).^2; 
-        distance_y = ( sparse(coordinates_interface.y.*edge_regions_interface)*( edge_regions_scatter' ) - ...
+        distance_y = ( sparse(coordinates_interface.y)*( edge_regions_scatter' ) - ...
                        edge_regions_interface*( coordinates_scatter.y.*edge_regions_scatter )' ).^2;
+        
+        indexes = distance_x + distance_y <= 1.01^2 & distance_x + distance_y > 0;   
 
-        % now determine the site pairs that are closer to each other than the 1.01x(atom-atom distance)
-        indexes = (distance_x + distance_y <= 1.01^2) & (distance_x + distance_y > 0);
-%}
 %{
-         figure
+         figure1 = figure('rend','painters','pos',[10 10 900 400]);
          plot( coordinates_scatter.x, coordinates_scatter.y, 'bx')
          hold on
          plot( coordinates_interface.x, coordinates_interface.y, 'rx')
@@ -271,8 +290,9 @@ end
                 interface_y = coordinates_interface.y(jdx)*ones(size(scatter_y));
                 plot( [scatter_x'; interface_x'], [scatter_y'; interface_y'], 'k' )
              end
+        %close(figure1);
 %}
-        % first determine the coupling constant 
+        % first determine the coupling constant
         params = Interface_Region.Read('params');
         coupling_constant = params.vargamma;       
 
@@ -396,6 +416,7 @@ methods (Access=protected)
         p.addParameter('cCircle_in', obj.cCircle_in);
         p.addParameter('cCircle_out', obj.cCircle_out);
         p.addParameter('middle_width', obj.middle_width);
+        p.addParameter('lead_width', obj.lead_width);
         
         
         p.addParameter('width', obj.width);
@@ -424,6 +445,7 @@ methods (Access=protected)
         obj.middle_width = p.Results.middle_width;
         obj.cCircle_in   = p.Results.cCircle_in;
         obj.cCircle_out  = p.Results.cCircle_out;
+        obj.lead_width  = p.Results.lead_width;
         
     end
     
