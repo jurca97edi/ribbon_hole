@@ -136,18 +136,6 @@ end
             
         %removing the sites of the inner hole        
         CreateH.RemoveSites( indexes_hole | indexes_out );
-%{
-        figure
-        plot( coordinates_scatter.x, coordinates_scatter.y, 'bx')
-        hold on      
-        
-        plot( coordinates_scatter.x(~( indexes_out | remove_left | remove_right)), coordinates_scatter.y(~( indexes_out | remove_left | remove_right)), 'kx');
-         
-        plot( coordinates_scatter.x( keep_left_lead | keep_right_lead), coordinates_scatter.y( keep_left_lead | keep_right_lead), 'rx');      
-        
-        %removing the sites of the inner hole account for leads        
-        %CreateH.RemoveSites( indexes_hole | (indexes_out | remove_left | remove_right ) & not_lead );
-%}      
                 
         % obtaining the modified coordinates
         coordinates_scatter = CreateH.Read('coordinates');
