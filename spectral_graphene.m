@@ -314,10 +314,8 @@ end
      
     end
 
-%% LeadModel
-%> @brief insert Bz magnetic field into the leads
-    function cLead = LeadModel( lead_idx, E, varargin )
-
+   function cLead = LeadModel( lead_idx, E, varargin )
+        
         p_inner = inputParser;
         p_inner.addParameter('createCore', 0);
         p_inner.addParameter('Just_Create_Hamiltonians', 0);
@@ -328,134 +326,117 @@ end
         p_inner.addParameter('SelfEnergy',false); % set true to calculate the self energy of the semi-infinite lead
         p_inner.addParameter('SurfaceGreensFunction', true );% set true to calculate the surface Greens function of the semi-infinite lead
         p_inner.addParameter('leadmodel', []); %function handle for an individual physical model for the contacts
-        p_inner.addParameter('CustomHamiltonian', []);
+        p_inner.addParameter('CustomHamiltonian', []); 
         p_inner.addParameter('q', [] ) %transverse momentum
         p_inner.parse(varargin{:});
         createCore            = p_inner.Results.createCore;
         Just_Create_Hamiltonians = p_inner.Results.Just_Create_Hamiltonians;
         shiftLead             = p_inner.Results.shiftLead;
         coordinates_shift     = p_inner.Results.coordinates_shift;
-        transversepotential   = p_inner.Results.transversepotential;
+        transversepotential             = p_inner.Results.transversepotential;
         SelfEnergy            = p_inner.Results.SelfEnergy;
         SurfaceGreensFunction = p_inner.Results.SurfaceGreensFunction;
         q                     = p_inner.Results.q;
-        CustomHamiltonian     = p_inner.Results.CustomHamiltonian;
-        leadmodel             = p_inner.Results.leadmodel;
-    
-        Opt2 = Opt;
-        Opt2.magnetic_field = false;
-        Opt2.Silent = true;
         
-        if (lead_idx > 2)
-            
-            cTransport_Interface = Transport_Interface(E, Opt2, param );
+        Opt2 = Opt;
+        Opt2.Silent = true;        
+  
+        % create class constructing the Hamiltonians of the first layer (composed of two atomic sheets)
+        cLead = Lead( Opt2, param, 'hanyadik_lead', lead_idx);
+        
+        if createCore
+            return
+        end
+         
+        % creating Hamiltonians
+        cLead.CreateHamiltonians();
+        
+        % shifting the coordinates according to the position of the lead
+        cLead.ShiftCoordinates( coordinates_shift );
                 
-            cLead = cTransport_Interface.SurfaceGreenFunctionCalculator( lead_idx, 'createCore', createCore, ...
-                        'Just_Create_Hamiltonians', Just_Create_Hamiltonians, ...
-                        'shiftLead', shiftLead, ...
-                        'coordinates_shift', coordinates_shift, ...
-                        'transversepotential', transversepotential, ...
-                        'SelfEnergy', SelfEnergy, ...
-                        'SurfaceGreensFunction', SurfaceGreensFunction);
-                    
-        else
-            % create class constructing the Hamiltonians of the first layer (composed of two atomic sheets)
-            cLead = Lead_Keldysh( Opt2, param, 'hanyadik_lead', lead_idx);
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % The normal lead 1 - LEFT SIDE
+         if( lead_idx == 1 )
 
-            if createCore
-                return
+            coordinates = cLead.Read('coordinates');
+
+            % Attach lead to the side of the sample 
+            % 400=20^2 is the width of the weakly doped region
+            tmp = coordinates.y - min(coordinates.y);
+            coordinates.y = coordinates.x;
+            coordinates.x = tmp-0.5;
+
+            coordinates.x = coordinates.x - floor(( 2*width - lead_width )/2*1.5/3)*3 - 3;
+            coordinates.y = coordinates.y + round( ( cCircle_out.center.y - 20)/sqrt(3) )*sqrt(3);
+
+            cLead.Write('coordinates', coordinates);
+        
+            % "u" and "v" like components must be transformed differently in BdG theory
+            if isprop( coordinates, 'BdG_u' ) && ~isempty(coordinates.BdG_u)
+                fact = -(-1).^coordinates.BdG_u;
+            else
+                fact = ones( size(coordinates.x) );
             end
+            
+            % adding doping potential to the bottom sheet
+            H0 = cLead.Read('H0');
+            H0 = H0 + sparse( 1:size(H0,1), 1:size(H0,1), fact*0, size(H0,1), size(H0,1));
+            cLead.Write('H0', H0);                           
 
-            % creating Hamiltonians
-            cLead.CreateHamiltonians();
+         end
+        % RIGHT SIDE
+        if( lead_idx == 2 )
 
-            % shifting the coordinates according to the position of the lead
-            cLead.ShiftCoordinates( coordinates_shift );
+            coordinates = cLead.Read('coordinates');
 
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            % The normal lead 1 - LEFT SIDE
-             if( lead_idx == 1 )
+            % Attach lead to the side of the sample 
+            tmp = coordinates.y-min( coordinates.y );
+            coordinates.y = coordinates.x;
+            coordinates.x = tmp-0.5;
 
-                coordinates = cLead.Read('coordinates');
+            coordinates.x = coordinates.x - floor(( 2*width - lead_width )/2*1.5/3)*3 + middle_width*1.5;% - 3;
+            coordinates.y = coordinates.y + round( ( cCircle_out.center.y - 20)/sqrt(3) )*sqrt(3); 
 
-                % Attach lead to the side of the sample 
-                % 400=20^2 is the width of the weakly doped region
-                tmp = coordinates.y - min(coordinates.y);
-                coordinates.y = coordinates.x;
-                coordinates.x = tmp-0.5;
-
-                coordinates.x = coordinates.x - floor(( 2*width - lead_width )/2*1.5/3)*3 - 3;
-                coordinates.y = coordinates.y + round( ( cCircle_out.center.y - 20)/sqrt(3) )*sqrt(3);
-
-                cLead.Write('coordinates', coordinates);
-
-                % "u" and "v" like components must be transformed differently in BdG theory
-                if isprop( coordinates, 'BdG_u' ) && ~isempty(coordinates.BdG_u)
-                    fact = -(-1).^coordinates.BdG_u;
-                else
-                    fact = ones( size(coordinates.x) );
-                end
-
-                % adding doping potential to the bottom sheet
-                H0 = cLead.Read('H0');
-                H0 = H0 + sparse( 1:size(H0,1), 1:size(H0,1), fact*0, size(H0,1), size(H0,1));
-                cLead.Write('H0', H0);                           
-
-             end
-            % RIGHT SIDE
-            if( lead_idx == 2 )
-
-                coordinates = cLead.Read('coordinates');
-
-                % Attach lead to the side of the sample 
-                tmp = coordinates.y-min( coordinates.y );
-                coordinates.y = coordinates.x;
-                coordinates.x = tmp-0.5;
-
-                coordinates.x = coordinates.x - floor(( 2*width - lead_width )/2*1.5/3)*3 + middle_width*1.5;% - 3;
-                coordinates.y = coordinates.y + round( ( cCircle_out.center.y - 20)/sqrt(3) )*sqrt(3); 
-
-                cLead.Write('coordinates', coordinates);
-
-                % "u" and "v" like components must be transformed differently in BdG theory
-                if isprop( coordinates, 'BdG_u' ) && ~isempty(coordinates.BdG_u)
-                    fact = -(-1).^coordinates.BdG_u;
-                else
-                    fact = ones( size(coordinates.x) );
-                end
-
-                % adding doping potential to the bottom sheet
-                H0 = cLead.Read('H0');
-                H0 = H0 + sparse( 1:size(H0,1), 1:size(H0,1), fact*0, size(H0,1), size(H0,1));
-                cLead.Write('H0', H0);            
-
+            cLead.Write('coordinates', coordinates);
+        
+            % "u" and "v" like components must be transformed differently in BdG theory
+            if isprop( coordinates, 'BdG_u' ) && ~isempty(coordinates.BdG_u)
+                fact = -(-1).^coordinates.BdG_u;
+            else
+                fact = ones( size(coordinates.x) );
             end
+            
+            % adding doping potential to the bottom sheet
+            H0 = cLead.Read('H0');
+            H0 = H0 + sparse( 1:size(H0,1), 1:size(H0,1), fact*0, size(H0,1), size(H0,1));
+            cLead.Write('H0', H0);            
+        
+        end
 
-
-            if Just_Create_Hamiltonians
-                return;
-            end
-
-
-            % Solve the eigen problem
-            cLead.TrukkosSajatertekek(E);
-
-            % group velocities
-            cLead.Group_Velocity();
-
-
-            % retarded surface Green operator
-            if SurfaceGreensFunction
-                cLead.SurfaceGreenFunction();
-            end
-
-            % retarded SelfEnergy
-            if SelfEnergy
-                cLead.SelfEnergy();
-            end
+        
+        if Just_Create_Hamiltonians
+            return;
         end
         
-    end
+        
+        % Solve the eigen problem
+        cLead.TrukkosSajatertekek(E);
+        
+        % group velocities
+        cLead.Group_Velocity();
+               
+        
+        % retarded surface Green operator
+        if SurfaceGreensFunction
+            cLead.SurfaceGreenFunction();
+        end
+        
+        % retarded SelfEnergy
+        if SelfEnergy
+            cLead.SelfEnergy();
+        end
+        
+    end 
 
     function ret = ScatterPot( CreateH, Energy )
     
