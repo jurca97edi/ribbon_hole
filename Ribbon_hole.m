@@ -251,7 +251,7 @@ end
         indexes = distance_x + distance_y <= 1.01^2 & distance_x + distance_y > 0;   
 
 %{
-         figure1 = figure('rend','painters','pos',[10 10 900 400]);
+
          plot( coordinates_scatter.x, coordinates_scatter.y, 'bx')
          hold on
          plot( coordinates_interface.x, coordinates_interface.y, 'rx')
@@ -263,7 +263,6 @@ end
                 interface_y = coordinates_interface.y(jdx)*ones(size(scatter_y));
                 plot( [scatter_x'; interface_x'], [scatter_y'; interface_y'], 'k' )
              end
-        %close(figure1);
 %}
         % first determine the coupling constant
         params = Interface_Region.Read('params');
@@ -289,8 +288,6 @@ end
                 Kcoupling = Kcoupling(:, non_singluar_sites_scatter_logical);
                 Kcouplingadj = Kcouplingadj(non_singluar_sites_scatter_logical, :);                                 
             end
-            
-
             
         elseif Lead_Orientation == -1
             

@@ -237,8 +237,8 @@ end
 
             hScatterPot = @ScatterPot;
 
-            for jdx=1:length(Evec)
-            %parfor jdx=1:length(Evec)
+            %for jdx=1:length(Evec)
+            parfor jdx=1:length(Evec)
                  Energy = Evec(jdx);                 
 
                  % create an instance of class DOS to calculate the density of states along the whole scattering region
@@ -413,7 +413,6 @@ end
         
         end
 
-        
         if Just_Create_Hamiltonians
             return;
         end
@@ -435,7 +434,6 @@ end
         if SelfEnergy
             cLead.SelfEnergy();
         end
-        
     end 
 
     function ret = ScatterPot( CreateH, Energy )
