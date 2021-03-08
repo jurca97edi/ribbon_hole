@@ -5,7 +5,7 @@
     function center_sites = ChoseSitesInner( coords )
         %ribbon_length = (max(coords.y) - min(coords.y));
       
-        center_sites = abs(coords.y - mean(coords.y)) < norm(coords.a)/4;
+        center_sites = abs(coords.y - mean(coords.y)) < norm(coords.a)*2;
     
         figure1 = figure('rend','painters','pos',[10 10 1200 800]);
         
