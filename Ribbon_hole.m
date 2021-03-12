@@ -128,7 +128,7 @@ end
 %        hold on
 
         % determine sites to be removed
-        indexes_hole = (coordinates_scatter.x - obj.cCircle_in.center.x).^2 + (coordinates_scatter.y - obj.cCircle_in.center.y).^2 <= obj.cCircle_in.radius^2;
+        indexes_hole = (coordinates_scatter.x - obj.cCircle_in.center.x).^2 + (coordinates_scatter.y - obj.cCircle_in.center.y).^2/4 <= obj.cCircle_in.radius^2;
 
         % determine sites beyound the circular boundary
         indexes_out =  floor(abs(coordinates_scatter.x - obj.cCircle_out.center.x)/coordinates.b*obj.width*2)*[1.5; 0] >= 1.5*obj.lead_width/2 & ...
