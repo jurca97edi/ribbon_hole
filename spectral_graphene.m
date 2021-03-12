@@ -72,7 +72,6 @@ end
 
     % the width in the middle in l.c.
     middle_width = 2*width;
-    %middle_width = 2*width + 4;
     lead_width = 1.5*width;
 
     % setting the Fermi energy in the leads    
@@ -122,6 +121,8 @@ end
 
     cRibbon=[];
 
+
+    hLeadModel = @LeadModel;
     % creating the NTerminal class
     cRibbon = Ribbon_hole('width', width, 'height', height, 'Opt', Opt, 'param', param, 'filenameOut', fullfile( outputdir, [outfilename, '.xml']), ...
              'leadmodel', hLeadModel, 'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width, 'lead_width', lead_width);     %{
