@@ -184,7 +184,7 @@ end
         %end
         
         phivec_length = pi;
-        phivec = 0:phivec_length/2:phivec_length;
+        phivec = phivec_length:-phivec_length/2:0;
         %phivec = 0:phivec_length/(resolution-1):phivec_length;
         %phivec = [pi/3,2*pi/3];
     end
