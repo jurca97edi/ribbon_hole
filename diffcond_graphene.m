@@ -60,7 +60,9 @@ mu_vec = mu_min:(mu_max-mu_min)/(mu_db-1):mu_max;
 setOutputDir()
 
 % The phase of the superconducting conatct
-DeltaPhi =[0, pi/2, pi];
+%DeltaPhi =[0, pi/2, pi];
+DeltaPhi =[pi, pi/2, 0];
+
 
 diffcond = zeros( length(DeltaPhi), length(mu_vec) ); %diffcond contains total diffcond, electron part and hole part in (~,:,~) indexes
 
