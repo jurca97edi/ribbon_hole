@@ -206,8 +206,8 @@ end
             phi = phivec(idx);
             
             % setting the phase difference
-            param.Leads{2}.pair_potential = abs(param.Leads{2}.pair_potential)*exp(1i*phi);
-            param.Leads{1}.pair_potential = abs(param.Leads{1}.pair_potential);
+            param.Leads{4}.pair_potential = abs(param.Leads{4}.pair_potential)*exp(1i*phi);
+            param.Leads{3}.pair_potential = abs(param.Leads{3}.pair_potential);
 			
             disp(' ')
             disp(' ')

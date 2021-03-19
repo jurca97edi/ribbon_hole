@@ -136,7 +136,7 @@ end
             
         %removing the sites of the inner hole        
         CreateH.RemoveSites( indexes_hole | indexes_out );
-                
+               
         % obtaining the modified coordinates
         coordinates_scatter = CreateH.Read('coordinates');
 %        plot( coordinates_scatter.x, coordinates_scatter.y, 'rx')
@@ -239,37 +239,55 @@ end
         % determine the coupling between the interface and the scattering region
         coordinates_interface = Interface_Region.Read('coordinates');
 
-        edge_regions_scatter = sparse(coordinates_scatter.y == min(coordinates_scatter.y) | coordinates_scatter.y == max(coordinates_scatter.y) | coordinates_scatter.x == min(coordinates_scatter.x) | coordinates_scatter.x == max(coordinates_scatter.x) );
+        edge_regions_scatter_N = sparse(coordinates_scatter.x == min(coordinates_scatter.x) | coordinates_scatter.x == max(coordinates_scatter.x) );
+        edge_regions_scatter_S = sparse(coordinates_scatter.y == min(coordinates_scatter.y) | coordinates_scatter.y == max(coordinates_scatter.y) );
         
         edge_regions_interface = sparse(ones(length(coordinates_interface.y),1));% == min(coordinates_interface.y) | coordinates_interface.y == max(coordinates_interface.y) ) | sparse(coordinates_interface.x == min(coordinates_interface.x) | coordinates_interface.x == max(coordinates_interface.x) );
        
-        distance_x = ( sparse(coordinates_interface.x)*( edge_regions_scatter' ) - ...
-                       edge_regions_interface*( coordinates_scatter.x.*edge_regions_scatter )' ).^2; 
-        distance_y = ( sparse(coordinates_interface.y)*( edge_regions_scatter' ) - ...
-                       edge_regions_interface*( coordinates_scatter.y.*edge_regions_scatter )' ).^2;
+        distance_x_N = ( sparse(coordinates_interface.x)*( edge_regions_scatter_N' ) - ...
+                       edge_regions_interface*( coordinates_scatter.x.*edge_regions_scatter_N )' ).^2; 
+        distance_y_N = ( sparse(coordinates_interface.y)*( edge_regions_scatter_N' ) - ...
+                       edge_regions_interface*( coordinates_scatter.y.*edge_regions_scatter_N )' ).^2;
         
-        indexes = distance_x + distance_y <= 1.01^2 & distance_x + distance_y > 0;   
+        indexes_N = distance_x_N + distance_y_N <= 1.01^2 & distance_x_N + distance_y_N > 0;   
+
+        distance_x_S = ( sparse(coordinates_interface.x)*( edge_regions_scatter_S' ) - ...
+                       edge_regions_interface*( coordinates_scatter.x.*edge_regions_scatter_S )' ).^2; 
+        distance_y_S = ( sparse(coordinates_interface.y)*( edge_regions_scatter_S' ) - ...
+                       edge_regions_interface*( coordinates_scatter.y.*edge_regions_scatter_S )' ).^2;
+        
+        indexes_S = distance_x_S + distance_y_S <= 1.01^2 & distance_x_S + distance_y_S > 0;   
 
 %{
-
+         figure1 = figure('rend','painters','pos',[10 10 900 400]);
          plot( coordinates_scatter.x, coordinates_scatter.y, 'bx')
          hold on
          plot( coordinates_interface.x, coordinates_interface.y, 'rx')
 
-             for jdx = 1:size(indexes,1)
-                scatter_x = coordinates_scatter.x(indexes(jdx,:));
-                scatter_y = coordinates_scatter.y(indexes(jdx,:));
+             for jdx = 1:size(indexes_S,1)
+                scatter_x = coordinates_scatter.x(indexes_S(jdx,:));
+                scatter_y = coordinates_scatter.y(indexes_S(jdx,:));
                 interface_x = coordinates_interface.x(jdx)*ones(size(scatter_x));
                 interface_y = coordinates_interface.y(jdx)*ones(size(scatter_y));
                 plot( [scatter_x'; interface_x'], [scatter_y'; interface_y'], 'k' )
              end
+        plot( coordinates_interface.x, coordinates_interface.y, 'rx')
+
+             for jdx = 1:size(indexes_N,1)
+                scatter_x = coordinates_scatter.x(indexes_N(jdx,:));
+                scatter_y = coordinates_scatter.y(indexes_N(jdx,:));
+                interface_x = coordinates_interface.x(jdx)*ones(size(scatter_x));
+                interface_y = coordinates_interface.y(jdx)*ones(size(scatter_y));
+                plot( [scatter_x'; interface_x'], [scatter_y'; interface_y'], 'k' )
+             end
+        %close(figure1);
 %}
         % first determine the coupling constant
         params = Interface_Region.Read('params');
         coupling_constant = params.vargamma;       
 
         % now construct the coupling matrices
-        Hcoupling = sparse(coupling_constant*indexes);
+        Hcoupling = sparse(coupling_constant*indexes_S + 0.01*coupling_constant*indexes_N);
         if ~isempty( coordinates_interface.BdG_u )
             Hcoupling( ~coordinates_interface.BdG_u, ~coordinates_scatter.BdG_u ) = -Hcoupling( ~coordinates_interface.BdG_u, ~coordinates_scatter.BdG_u );
             Hcoupling( ~coordinates_interface.BdG_u, coordinates_scatter.BdG_u ) = 0;
@@ -288,6 +306,8 @@ end
                 Kcoupling = Kcoupling(:, non_singluar_sites_scatter_logical);
                 Kcouplingadj = Kcouplingadj(non_singluar_sites_scatter_logical, :);                                 
             end
+            
+
             
         elseif Lead_Orientation == -1
             
