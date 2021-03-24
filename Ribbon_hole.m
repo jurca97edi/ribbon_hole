@@ -287,7 +287,7 @@ end
         coupling_constant = params.vargamma;       
 
         % now construct the coupling matrices
-        Hcoupling = sparse(coupling_constant*indexes_S + 0.01*coupling_constant*indexes_N);
+        Hcoupling = sparse(coupling_constant*indexes_S + coupling_constant*indexes_N);
         if ~isempty( coordinates_interface.BdG_u )
             Hcoupling( ~coordinates_interface.BdG_u, ~coordinates_scatter.BdG_u ) = -Hcoupling( ~coordinates_interface.BdG_u, ~coordinates_scatter.BdG_u );
             Hcoupling( ~coordinates_interface.BdG_u, coordinates_scatter.BdG_u ) = 0;
