@@ -214,6 +214,7 @@ methods (Access=protected)
         p.addParameter('EF', obj.EF);
         p.addParameter('bias_leads', obj.bias_leads);
         p.addParameter('cCircle_in', obj.cCircle_in);
+        p.addParameter('cCircle_in2', obj.cCircle_in2);
         p.addParameter('cCircle_out', obj.cCircle_out);
         p.addParameter('middle_width', obj.middle_width);
         p.addParameter('lead_width', obj.lead_width);
@@ -242,7 +243,7 @@ methods (Access=protected)
             'height', p.Results.height, ...
             'transversepotential', p.Results.transversepotential);
         
-        InputParsing@Ribbon_hole( obj, 'cCircle_in', p.Results.cCircle_in, 'cCircle_out', p.Results.cCircle_out, 'middle_width', p.Results.middle_width, 'lead_width', p.Results.lead_width );
+        InputParsing@Ribbon_hole( obj, 'cCircle_in', p.Results.cCircle_in, 'cCircle_in2', p.Results.cCircle_in2, 'cCircle_out', p.Results.cCircle_out, 'middle_width', p.Results.middle_width, 'lead_width', p.Results.lead_width );
 
     end
 

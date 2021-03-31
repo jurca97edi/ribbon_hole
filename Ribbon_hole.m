@@ -40,6 +40,8 @@ classdef Ribbon_hole < Ribbon
         %> an instance of structure circle describing the inner hole
         cCircle_in
         %> an instance of structure circle describing the outher boundaries of the scattering region
+        cCircle_in2
+        
         cCircle_out
         %> The width of the ribbon in the middle
         middle_width
@@ -128,7 +130,7 @@ end
 %        hold on
 
         % determine sites to be removed
-        indexes_hole = (coordinates_scatter.x - obj.cCircle_in.center.x).^2 + (coordinates_scatter.y - obj.cCircle_in.center.y).^2/4 <= obj.cCircle_in.radius^2;
+        indexes_hole = (coordinates_scatter.x - obj.cCircle_in.center.x).^2 + (coordinates_scatter.y - obj.cCircle_in.center.y).^2/((obj.cCircle_in2/obj.cCircle_in.radius)^2) <= obj.cCircle_in.radius^2;
 
         % determine sites beyound the circular boundary
         indexes_out =  floor(abs(coordinates_scatter.x - obj.cCircle_out.center.x)/coordinates.b*obj.width*2)*[1.5; 0] >= 1.5*obj.lead_width/2 & ...
@@ -241,6 +243,7 @@ end
 
         edge_regions_scatter_N = sparse(coordinates_scatter.x == min(coordinates_scatter.x) | coordinates_scatter.x == max(coordinates_scatter.x) );
         edge_regions_scatter_S = sparse(coordinates_scatter.y == min(coordinates_scatter.y) | coordinates_scatter.y == max(coordinates_scatter.y) );
+        %edge_regions_scatter_S = sparse(coordinates_scatter.y == min(coordinates_scatter.y) );
         
         edge_regions_interface = sparse(ones(length(coordinates_interface.y),1));% == min(coordinates_interface.y) | coordinates_interface.y == max(coordinates_interface.y) ) | sparse(coordinates_interface.x == min(coordinates_interface.x) | coordinates_interface.x == max(coordinates_interface.x) );
        
@@ -404,6 +407,7 @@ methods (Access=protected)
         p.addParameter('q', obj.q);
         p.addParameter('EF', obj.EF);
         p.addParameter('cCircle_in', obj.cCircle_in);
+        p.addParameter('cCircle_in2', obj.cCircle_in2);
         p.addParameter('cCircle_out', obj.cCircle_out);
         p.addParameter('middle_width', obj.middle_width);
         p.addParameter('lead_width', obj.lead_width);
@@ -434,6 +438,7 @@ methods (Access=protected)
         
         obj.middle_width = p.Results.middle_width;
         obj.cCircle_in   = p.Results.cCircle_in;
+        obj.cCircle_in2  = p.Results.cCircle_in2;
         obj.cCircle_out  = p.Results.cCircle_out;
         obj.lead_width  = p.Results.lead_width;
         

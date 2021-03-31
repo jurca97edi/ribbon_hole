@@ -1,4 +1,4 @@
-function diffcond_graphene( height, width, flux , Circ_in, Circ_out , EF , resolution)
+function diffcond_graphene( height, width, flux , Circ_in, Circ_in2 , EF , resolution)
 
 if ~exist('filenum', 'var')
     filenum = 1;
@@ -24,6 +24,10 @@ if ~exist('Circ_in', 'var')
     Circ_in = 0.7;
 end
 
+if ~exist('Circ_in', 'var')
+    Circ_in2 = 0.7;
+end
+
 if ~exist('EF', 'var')
     EF = 0.2;
 end
@@ -36,6 +40,7 @@ end
 height=str2num(height);
 width=str2num(width);
 Circ_in=str2num(Circ_in);
+Circ_in2=str2num(Circ_in2);
 EF=str2num(EF);
 resolution=str2num(resolution);
 
@@ -69,13 +74,13 @@ tic
 
 for idx = 1:length(DeltaPhi)
      
-     diffcond_summed = DiffCond_ribbon_hole( DeltaPhi(idx), height, width, Circ_in , EF, resolution, bottom_gate, top_gate, mu_vec, outputdir);
+     diffcond_summed = DiffCond_ribbon_hole( DeltaPhi(idx), height, width, Circ_in , Circ_in2, EF, resolution, bottom_gate, top_gate, mu_vec, outputdir);
      
      diffcond(idx, :) = diffcond_summed;
      
      EgeszAbra();
 
-     save( [outputdir,'/',outfilename, '.mat'], 'diffcond', 'mu_vec', 'EF', 'Circ_in', 'height', 'bottom_gate', 'mu_vec' );
+     save( [outputdir,'/',outfilename, '.mat'], 'diffcond', 'mu_vec', 'EF', 'Circ_in', 'Circ_in2', 'height', 'bottom_gate', 'mu_vec' );
      
      % displaying the status of the calculations
     disp([ num2str(idx/length(DeltaPhi)*100),' % calculated of the density of states.'])
@@ -142,7 +147,7 @@ toc
        
     end
     function setOutputDir()
-        resultsdir = ['Diffcond_H',num2str(height),'_W',num2str(width),'_Cin',num2str(Circ_in),'_EF',num2str(EF),'_res',num2str(resolution)];
+        resultsdir = ['Diffcond_H',num2str(height),'_W',num2str(width),'_Cin',num2str(Circ_in),'_Cout',num2str(Circ_in2),'_EF',num2str(EF),'_res',num2str(resolution)];
         mkdir(resultsdir );
         outputdir = resultsdir;        
     end

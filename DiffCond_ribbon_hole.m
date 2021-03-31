@@ -13,7 +13,7 @@
 %
 %    You should have received a copy of the GNU General Public License
 %    along with this program.  If not, see http://www.gnu.org/licenses/.
-function diffcond_summed = DiffCond_ribbon_hole( DeltaPhi, height, width , Circ_in , EF , resolution, PotentialStrength_lower, PotentialStrength_upper, mu_vec , outputdir)
+function diffcond_summed = DiffCond_ribbon_hole( DeltaPhi, height, width , Circ_in , Circ_in2 , EF , resolution, PotentialStrength_lower, PotentialStrength_upper, mu_vec , outputdir)
 
     if ~exist('filenum', 'var')
         filenum = 1;
@@ -70,6 +70,8 @@ function diffcond_summed = DiffCond_ribbon_hole( DeltaPhi, height, width , Circ_
     cCircle_in.center.y = (height)*sqrt(3)/2;
     cCircle_in.radius = Circ_in*R;
 
+    cCircle_in2=Circ_in2*R;
+    
     % outher circle
     cCircle_out = structures('circle');
     cCircle_out.center = cCircle_in.center;
@@ -93,7 +95,7 @@ function diffcond_summed = DiffCond_ribbon_hole( DeltaPhi, height, width , Circ_
 
     % creating the two layer class for Keldysh calculations
     cRibbon_K = Ribbon_hole_Keldysh('width', width, 'height', height, 'Opt', Opt, 'param', param, 'filenameOut', fullfile( outputdir, [outfilename, '.xml']), ...
-             'leadmodel', hLeadModel, 'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width, 'lead_width', lead_width, 'WorkingDir',  workingdir, 'bias_leads', mu_leads, 'EF', mu, 'T', T);                 
+             'leadmodel', hLeadModel, 'cCircle_in', cCircle_in, 'cCircle_in2', cCircle_in2, 'cCircle_out', cCircle_out, 'middle_width', middle_width, 'lead_width', lead_width, 'WorkingDir',  workingdir, 'bias_leads', mu_leads, 'EF', mu, 'T', T);                 
 
     ScatterPlot()
 
@@ -134,10 +136,11 @@ function diffcond_summed = DiffCond_ribbon_hole( DeltaPhi, height, width , Circ_
         
         % creating the two layer class for Keldysh calculations
         cRibbon_K = Ribbon_hole_Keldysh('width', width, 'height', height, 'Opt', Opt, 'param', param, 'filenameOut', fullfile( outputdir, [outfilename, '.xml']), ...
-                 'leadmodel', hLeadModel, 'cCircle_in', cCircle_in, 'cCircle_out', cCircle_out, 'middle_width', middle_width, 'lead_width', lead_width, 'WorkingDir',  workingdir, 'bias_leads', mu_leads, 'EF', mu, 'T', T);                 
+                 'leadmodel', hLeadModel, 'cCircle_in', cCircle_in, 'cCircle_in2', cCircle_in2, 'cCircle_out', cCircle_out, 'middle_width', middle_width, 'lead_width', lead_width, 'WorkingDir',  workingdir, 'bias_leads', mu_leads, 'EF', mu, 'T', T);                 
 
         % creating class to calculate the Josephson effect
-        cDiffcond = Diffcond_SSNN( Opt, 'junction', cRibbon_K, 'T', T, 'gfininvfromHamiltonian', true, 'scatterPotential', hScatterPotential );
+        %cDiffcond = Diffcond_SSNN( Opt, 'junction', cRibbon_K, 'T', T, 'gfininvfromHamiltonian', true, 'scatterPotential', hScatterPotential );
+        cDiffcond = Diffcond_SSNN( Opt, 'junction', cRibbon_K, 'T', T, 'gfininvfromHamiltonian', true );
 
         diffcond = cDiffcond.diffCond( 'mu_vec', mu_vec );
 
@@ -321,7 +324,7 @@ function diffcond_summed = DiffCond_ribbon_hole( DeltaPhi, height, width , Circ_
 
 %% sets the output directory
     function setOutputDir()
-        resultsdir = ['Diffcond_H',num2str(height),'_W',num2str(width),'_Cin',num2str(Circ_in),'_EF',num2str(EF),'_res',num2str(resolution)];
+        resultsdir = ['Diffcond_H',num2str(height),'_W',num2str(width),'_Cin',num2str(Circ_in),'_Cin2',num2str(Circ_in2),'_EF',num2str(EF),'_res',num2str(resolution)];
         mkdir(resultsdir );
         outputdir = resultsdir;   
         
