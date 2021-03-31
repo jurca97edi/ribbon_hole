@@ -147,7 +147,7 @@ toc
        
     end
     function setOutputDir()
-        resultsdir = ['Diffcond_H',num2str(height),'_W',num2str(width),'_Cin',num2str(Circ_in),'_Cout',num2str(Circ_in2),'_EF',num2str(EF),'_res',num2str(resolution)];
+        resultsdir = ['Diffcond_H',num2str(height),'_W',num2str(width),'_Cin',num2str(Circ_in),'_Cin2',num2str(Circ_in2),'_EF',num2str(EF),'_res',num2str(resolution)];
         mkdir(resultsdir );
         outputdir = resultsdir;        
     end
