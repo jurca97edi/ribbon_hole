@@ -144,7 +144,7 @@ function diffcond_summed = DiffCond_ribbon_hole( DeltaPhi, height, width , Circ_
 
         diffcond = cDiffcond.diffCond( 'mu_vec', mu_vec );
 
-        diffcond_summed = sum(diffcond);
+        diffcond_summed = diffcond;
         
     end
 

@@ -68,7 +68,7 @@ setOutputDir()
 %DeltaPhi =[0, pi/2, pi];
 DeltaPhi =[pi, pi/2, 0];
 
-diffcond = zeros( length(DeltaPhi), length(mu_vec) ); %diffcond contains total diffcond, electron part and hole part in (~,:,~) indexes
+diffcond = zeros( 3, length(DeltaPhi), length(mu_vec) ); %diffcond contains total diffcond, electron part and hole part in (~,:,~) indexes
 
 tic
 
@@ -76,7 +76,7 @@ for idx = 1:length(DeltaPhi)
      
      diffcond_summed = DiffCond_ribbon_hole( DeltaPhi(idx), height, width, Circ_in , Circ_in2, EF, resolution, bottom_gate, top_gate, mu_vec, outputdir);
      
-     diffcond(idx, :) = diffcond_summed;
+     diffcond(:,idx, :) = diffcond_summed;
      
      EgeszAbra();
 
@@ -92,7 +92,7 @@ toc
 %% plotfunction
     function EgeszAbra()
          
-        diffcond_to_plot = diffcond(idx,:);
+        diffcond_to_plot(:) = diffcond(1,idx,:);
         
 % ********************** plot the DOS ***********************
 
