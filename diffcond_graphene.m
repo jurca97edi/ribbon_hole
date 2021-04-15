@@ -92,7 +92,8 @@ toc
 %% plotfunction
     function EgeszAbra()
          
-        diffcond_to_plot(:) = diffcond(1,idx,:);
+        diffcond_electron(:) = diffcond(2,idx,:);
+        diffcond_hole(:) = diffcond(3,idx,:);
         
 % ********************** plot the DOS ***********************
 
@@ -114,8 +115,9 @@ toc
         %colbarlimits = [min(min(diffcond_to_plot)) max(max(diffcond_to_plot))];
         
         % define the axis limits        
+        Max=max([max(abs(diffcond_electron)),max(abs(diffcond_hole))]);
         x_lim = [min(mu_vec) max(mu_vec)]/pair_potential;
-        y_lim = [-1.05*max(min(diffcond_to_plot),max(diffcond_to_plot)) 1.05*max(min(diffcond_to_plot),max(diffcond_to_plot))];        
+        y_lim = [-1.05*Max 1.05*Max];        
         
         axes_DOS_upper_electron = axes('Parent',figure1, ...
                 'Visible', 'on',...
@@ -132,9 +134,12 @@ toc
         X = mu_vec;
 %       diffcond2plot = diffcond_to_plot';
         % plot the data
-        plot(X/pair_potential,diffcond_to_plot,'LineStyle','-','Color','red','Parent', axes_DOS_upper_electron)  
+        plot(X/pair_potential,diffcond_electron,'LineStyle','-','Color','red','Parent', axes_DOS_upper_electron)
         hold on;
+        plot(X/pair_potential,diffcond_hole,'LineStyle','-','Color','black','Parent', axes_DOS_upper_electron)        
         plot([x_lim(1),x_lim(2)],[0,0],'k--');
+        
+        legend({'EE','EH'},'Interpreter','Latex','FontSize',fontsize,'Location','best');        
         
         % Create xlabel
         xlabel('eV [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_electron);
