@@ -153,7 +153,7 @@ end
     %}
                                  
     % plot the coordinates of the scattering region
-%    ScatterPlot();
+    ScatterPlot();
     %return            
     
     % calculate the spectra of a slice with the give paramteres
@@ -186,10 +186,9 @@ end
 %> @return [2] 1D array of the transverse momentum points.
     function [Evec, phivec] = setVectors()
         
-        E_window = max(abs(Delta))/10;
         %E_window = max(abs(Delta))/5;
         %Evec = EF - E_window:2*E_window/resolution:EF + E_window;
-        Evec = 0:max(abs(Delta))*1.05/(resolution-1):1.05*max(abs(Delta));
+        Evec = -1.05*max(abs(Delta)):max(abs(Delta))*1.05/(resolution-1):0;
         
         phivec_length = pi;
         phivec = phivec_length:-phivec_length/2:0;
@@ -240,7 +239,8 @@ end
                  Energy = Evec(jdx);                 
 
                  % create an instance of class DOS to calculate the density of states along the whole scattering region
-                 DOS_handles = DOS( Opt, 'junction', cRibbon, 'useSelfEnergy', false, 'scatterPotential', hScatterPot);
+                 %DOS_handles = DOS( Opt, 'junction', cRibbon, 'useSelfEnergy', false, 'scatterPotential', hScatterPot);
+                 DOS_handles = DOS( Opt, 'junction', cRibbon, 'useSelfEnergy', false );
 
                  % calculate the local DOS along the whole scattering region
                  cLocalDOS = DOS_handles.LocalDOSCalc( Energy+1i*eta, 'ChoseSites', hChoseSites  );
