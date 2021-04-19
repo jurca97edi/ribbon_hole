@@ -71,7 +71,7 @@ function diffcond_summed = DiffCond_ribbon_hole( DeltaPhi, height, width , Circ_
     cCircle_in.radius = Circ_in*R;
 
     cCircle_in2=Circ_in2*R;
-    
+
     % outher circle
     cCircle_out = structures('circle');
     cCircle_out.center = cCircle_in.center;
@@ -283,21 +283,30 @@ function diffcond_summed = DiffCond_ribbon_hole( DeltaPhi, height, width , Circ_
         Hscatter = CreateH.Read('Hscatter');
 
         % sites on the right side of the scattering r.
-        sites2shift_left  = x  < cCircle_in.center.x & abs( y - cCircle_in.center.y ) < 20; 
-        sites2shift_right = x >= cCircle_in.center.x & abs( y - cCircle_in.center.y ) < 20; % 1 unit dist. is 0.142 nm
+        %sites2shift_left  = x  < cCircle_in.center.x & abs( y - cCircle_in.center.y ) < 20; 
+        %sites2shift_right = x >= cCircle_in.center.x & abs( y - cCircle_in.center.y ) < 20; % 1 unit dist. is 0.142 nm
+        
+        %sites2shift = x < cCircle_in.center.x & y < cCircle_in.center.y + cCircle_in2 & y - cCircle_in.center.y > 30;
+        %sites2shift = y > cCircle_in.center.y + cCircle_in2;
+        sites2shift = x < min(x) + 20;
         
         % shift up the on-site energy on the right side and down on the
         % left side with EF
         fact = -(-1).^coordinates.BdG_u;
 
-        Hscatter = Hscatter + sparse(1:length(x),1:length(x), sites2shift_right*( EF + mu_N ).*fact,length(x),length(x)) ...
-                            + sparse(1:length(x),1:length(x), sites2shift_left* (-EF + mu_N ).*fact,length(x),length(x));                                
+        %Hscatter = Hscatter + sparse(1:length(x),1:length(x), sites2shift_right*( EF + mu_N ).*fact,length(x),length(x)) ...
+        %                    + sparse(1:length(x),1:length(x), sites2shift_left* (-EF + mu_N ).*fact,length(x),length(x));                                
 
+        Hscatter = Hscatter + sparse(1:length(x),1:length(x), sites2shift*( - EF + mu_N ).*fact,length(x),length(x));
         %no shift
         %Hscatter = Hscatter + sparse(1:length(x),1:length(x), ( sites2shift_right & BdG_u )*( EF + mu_N ) - ( sites2shift_right & ~BdG_u )*( EF + mu_N ),length(x),length(x)) ...
         %                    + sparse(1:length(x),1:length(x), ( sites2shift_left & BdG_u )*(  EF + mu_N ) - ( sites2shift_left & ~BdG_u )*(  EF + mu_N ),length(x),length(x));
                         
         CreateH.Write('Hscatter', Hscatter);
+        
+        %plot(x,y,'.');
+        %hold on;
+        %plot(x(sites2shift),y(sites2shift),'x');
         
         ret = zeros(1,length(coordinates.x));
     end
