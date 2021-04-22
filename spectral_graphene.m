@@ -188,7 +188,7 @@ end
         
         %E_window = max(abs(Delta))/5;
         %Evec = EF - E_window:2*E_window/resolution:EF + E_window;
-        Evec = -1.05*max(abs(Delta)):max(abs(Delta))*1.05/(resolution-1):0;
+        Evec = -1.05*max(abs(Delta)):max(abs(Delta))*2.1/(resolution-1):1.05*max(abs(Delta));
         
         phivec_length = pi;
         phivec = phivec_length:-phivec_length/2:0;
