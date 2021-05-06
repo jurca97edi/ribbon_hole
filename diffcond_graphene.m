@@ -66,7 +66,8 @@ setOutputDir()
 
 % The phase of the superconducting conatct
 %DeltaPhi =[0, pi/2, pi];
-DeltaPhi =[pi, pi/2, 0];
+%DeltaPhi =[pi, pi/2, 0];
+DeltaPhi =[pi:-pi/(19):0];
 
 diffcond = zeros( 3, length(DeltaPhi), length(mu_vec) ); %diffcond contains total diffcond, electron part and hole part in (~,:,~) indexes
 
@@ -76,7 +77,7 @@ for idx = 1:length(DeltaPhi)
      
      diffcond_summed = DiffCond_ribbon_hole( DeltaPhi(idx), height, width, Circ_in , Circ_in2, EF, resolution, bottom_gate, top_gate, mu_vec, outputdir);
      
-     diffcond(:,idx, :) = diffcond_summed;
+     diffcond(:, idx, :) = diffcond_summed;
      
      EgeszAbra();
 
@@ -91,7 +92,12 @@ toc
 
 %% plotfunction
     function EgeszAbra()
-         
+        
+        diffcond_sum = zeros(1,resolution);
+        diffcond_electron = zeros(1,resolution);
+        diffcond_hole = zeros(1,resolution);
+                
+        diffcond_sum(:) = diffcond(1,idx,:);
         diffcond_electron(:) = diffcond(2,idx,:);
         diffcond_hole(:) = diffcond(3,idx,:);
         
@@ -115,7 +121,8 @@ toc
         %colbarlimits = [min(min(diffcond_to_plot)) max(max(diffcond_to_plot))];
         
         % define the axis limits        
-        Max=max([max(abs(diffcond_electron)),max(abs(diffcond_hole))]);
+        %Max=max([max(abs(diffcond_electron)),max(abs(diffcond_hole))]);
+        Max=max(abs(diffcond_sum));
         x_lim = [min(mu_vec) max(mu_vec)]/pair_potential;
         y_lim = [-1.05*Max 1.05*Max];        
         
@@ -134,12 +141,13 @@ toc
         X = mu_vec;
 %       diffcond2plot = diffcond_to_plot';
         % plot the data
-        plot(X/pair_potential,diffcond_electron,'LineStyle','-','Color','red','Parent', axes_DOS_upper_electron)
+        %plot(X/pair_potential,diffcond_electron,'LineStyle','-','Color','red','Parent', axes_DOS_upper_electron)
+        plot(X/pair_potential,diffcond_sum,'LineStyle','-','Color','red','Parent', axes_DOS_upper_electron)
         hold on;
-        plot(X/pair_potential,diffcond_hole,'LineStyle','-','Color','black','Parent', axes_DOS_upper_electron)        
+        %plot(X/pair_potential,diffcond_hole,'LineStyle','-','Color','black','Parent', axes_DOS_upper_electron)        
         plot([x_lim(1),x_lim(2)],[0,0],'k--');
         
-        legend({'EE','EH'},'Interpreter','Latex','FontSize',fontsize,'Location','best');        
+        %legend({'EE','EH'},'Interpreter','Latex','FontSize',fontsize,'Location','best');        
         
         % Create xlabel
         xlabel('eV [\Delta]','FontSize', fontsize,'FontName','Times New Roman', 'Parent', axes_DOS_upper_electron);
